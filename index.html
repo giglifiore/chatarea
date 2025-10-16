@@ -188,7 +188,7 @@
       messagesRef.on("child_added", snap => {
         const m = snap.val();
         const dateStr = new Date(m.timestamp).toLocaleString();
-        const genderIcon = m.gender === "male" ? "👨" : m.gender === "female" ? "👩" : "🧑";
+        const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
         const msgDiv = document.createElement("div");
         msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.uid}: ${m.text}`;
         privateBox.appendChild(msgDiv);
