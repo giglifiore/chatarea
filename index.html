@@ -11,6 +11,13 @@
 </head>
 <body>
   <h2>Chat Público por Zona 🌎</h2>
+  <label for="radius">Radio de visibilidad:</label>
+<select id="radius">
+  <option value="1">1 km</option>
+  <option value="5">5 km</option>
+  <option value="10">10 km</option>
+</select>
+
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
   <input type="text" id="message" placeholder="Escribe un mensaje..." />
@@ -61,7 +68,7 @@
         userLat = pos.coords.latitude;
         userLon = pos.coords.longitude;
         document.getElementById("status").innerText +=
-          ` | Ubicación detectada (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
+          ` | Ubicación detectada ('*')`;
         listenMessages();
       }, err => alert("Error de ubicación: " + err.message));
     }
