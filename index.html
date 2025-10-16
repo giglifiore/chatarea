@@ -9,11 +9,22 @@
     #status { color: green; margin-bottom: 10px; }
     #private-chat-box { border: 1px solid blue; padding: 10px; margin-top: 10px; height: 200px; overflow-y: auto; display:none;}
     .private-input { width: 70%; }
+    #gender-container { margin-bottom: 10px; }
   </style>
 </head>
 <body>
   <h2>Chat Público por Zona 🌎</h2>
-  
+
+  <div id="gender-container">
+    <label>Género:</label>
+    <select id="gender">
+      <option value="M">♂️ Masculino</option>
+      <option value="F">♀️ Femenino</option>
+      <option value="O">⚧ Otro</option>
+    </select>
+    <button id="setGender">Guardar</button>
+  </div>
+
   <label for="radius">Radio de visibilidad:</label>
   <select id="radius">
     <option value="1">1 km</option>
@@ -35,7 +46,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
   <script>
-    // 🔧 Configuración de Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
       authDomain: "chatarea-6170e.firebaseapp.com",
@@ -44,9 +54,8 @@
       messagingSenderId: "147913199399",
       appId: "1:147913199399:web:886f09ab74017b3fc22302",
       measurementId: "G-RECZQ87BG4",
-      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com" // ✅ importante
+      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
     };
-
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -54,21 +63,22 @@
 
     let userLat = 0, userLon = 0;
     let chatRadius = 1.0;
-
     const chatBox = document.getElementById("chat-box");
     const input = document.getElementById("message");
     const sendBtn = document.getElementById("send");
     const radiusSelect = document.getElementById("radius");
     const privateBox = document.getElementById("private-chat-box");
-
+    const genderSelect = document.getElementById("gender");
+    const setGenderBtn = document.getElementById("setGender");
     let currentPrivateChatId = null;
+    let userGender = "O"; // valor por defecto
 
     // 🔐 Login anónimo
     auth.signInAnonymously()
       .then(() => {
         document.getElementById("status").innerText = "Autenticado anónimamente ✅";
         initLocation();
-        listenPrivateChats(); // <-- listener global de chats privados
+        listenPrivateChats(); // listener global de chats privados
       })
       .catch(err => alert("Error al autenticar: " + err.message));
 
@@ -87,6 +97,14 @@
       }, err => alert("Error de ubicación: " + err.message));
     }
 
+    // 🔧 Guardar género
+    setGenderBtn.onclick = () => {
+      userGender = genderSelect.value;
+      const uid = auth.currentUser.uid;
+      db.ref("usuarios/" + uid).set({ genero: userGender });
+      alert("Género guardado ✅");
+    };
+
     // 📡 Cambiar radio
     radiusSelect.addEventListener("change", () => {
       chatRadius = parseFloat(radiusSelect.value);
@@ -98,15 +116,8 @@
     sendBtn.addEventListener("click", () => {
       const text = input.value.trim();
       if (!text) return;
-
-      const msg = {
-        text,
-        timestamp: Date.now(),
-        uid: auth.currentUser ? auth.currentUser.uid : "anon",
-        lat: userLat,
-        lon: userLon
-      };
-
+      const uid = auth.currentUser.uid;
+      const msg = { text, timestamp: Date.now(), uid, lat: userLat, lon: userLon };
       db.ref("mensajes").push(msg);
       input.value = "";
     });
@@ -119,22 +130,23 @@
         const msg = snap.val();
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
         if (dist <= chatRadius) {
-          const div = document.createElement("div");
-          div.textContent = `${msg.text} (${dist.toFixed(2)} km)`;
+          db.ref("usuarios/" + msg.uid).once("value").then(snapshot => {
+            const gen = snapshot.val()?.genero || "O";
+            let icon = gen === "M" ? "♂️" : gen === "F" ? "♀️" : "⚧";
+            const div = document.createElement("div");
+            div.textContent = `${icon} ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
 
-          // Botón chat privado
-          if(msg.uid !== auth.currentUser.uid){
-            const btn = document.createElement("button");
-            btn.textContent = "Privado";
-            btn.style.marginLeft = "10px";
-            btn.addEventListener("click", () => {
-              openPrivateChat(msg.uid);
-            });
-            div.appendChild(btn);
-          }
+            if(msg.uid !== auth.currentUser.uid){
+              const btn = document.createElement("button");
+              btn.textContent = "Privado";
+              btn.style.marginLeft = "10px";
+              btn.addEventListener("click", () => { openPrivateChat(msg.uid); });
+              div.appendChild(btn);
+            }
 
-          chatBox.appendChild(div);
-          chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+          });
         }
       });
     }
@@ -151,7 +163,7 @@
       return R * c;
     }
 
-    // 💙 Abrir chat privado manual
+    // 💙 Abrir chat privado
     function openPrivateChat(otherUid){
       const chatId = [auth.currentUser.uid, otherUid].sort().join("_");
       showPrivateChat(chatId, otherUid);
@@ -170,7 +182,7 @@
     }
 
     function showPrivateChat(chatId, otherUid) {
-      if(currentPrivateChatId === chatId) return; // ya abierto
+      if(currentPrivateChatId === chatId) return;
       currentPrivateChatId = chatId;
       privateBox.style.display = "block";
       privateBox.innerHTML = `<h4>Chat privado con ${otherUid}</h4>`;
@@ -188,10 +200,14 @@
       messagesRef.off();
       messagesRef.on("child_added", snap => {
         const m = snap.val();
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = `${m.uid}: ${m.text}`;
-        privateBox.appendChild(msgDiv);
-        privateBox.scrollTop = privateBox.scrollHeight;
+        db.ref("usuarios/" + m.uid).once("value").then(snapshot => {
+          const gen = snapshot.val()?.genero || "O";
+          let icon = gen === "M" ? "♂️" : gen === "F" ? "♀️" : "⚧";
+          const msgDiv = document.createElement("div");
+          msgDiv.textContent = `${icon} ${m.uid}: ${m.text}`;
+          privateBox.appendChild(msgDiv);
+          privateBox.scrollTop = privateBox.scrollHeight;
+        });
       });
 
       btnSend.onclick = () => {
