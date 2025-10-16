@@ -24,6 +24,7 @@
 
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
+  
   <input type="text" id="message" placeholder="Escribe un mensaje..." />
   <button id="send">Enviar</button>
 
@@ -91,18 +92,20 @@
     sendBtn.addEventListener("click", () => {
       const text = input.value.trim();
       if (!text) return;
+
+      const gender = "other"; // por defecto si quieres puedes cambiarlo según usuario
       const msg = {
         text,
         timestamp: Date.now(),
         uid: auth.currentUser ? auth.currentUser.uid : "anon",
         lat: userLat,
-        lon: userLon
+        lon: userLon,
+        gender
       };
       db.ref("mensajes").push(msg);
       input.value = "";
     });
 
-    // 💬 Escuchar mensajes públicos con fecha, hora y ordenados por timestamp
     function listenMessages() {
       const mensajesRef = db.ref("mensajes").orderByChild("timestamp");
       mensajesRef.off();
@@ -111,8 +114,9 @@
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
         if (dist <= chatRadius) {
           const dateStr = new Date(msg.timestamp).toLocaleString();
+          const genderIcon = msg.gender === "male" ? "👨" : msg.gender === "female" ? "👩" : "🧑";
           const div = document.createElement("div");
-          div.textContent = `[${dateStr}] ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
+          div.textContent = `[${dateStr}] ${genderIcon} ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
 
           if(msg.uid !== auth.currentUser.uid){
             const btn = document.createElement("button");
@@ -175,8 +179,9 @@
       messagesRef.on("child_added", snap => {
         const m = snap.val();
         const dateStr = new Date(m.timestamp).toLocaleString();
+        const genderIcon = m.gender === "male" ? "👨" : m.gender === "female" ? "👩" : "🧑";
         const msgDiv = document.createElement("div");
-        msgDiv.textContent = `[${dateStr}] ${m.uid}: ${m.text}`;
+        msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.uid}: ${m.text}`;
         privateBox.appendChild(msgDiv);
         privateBox.scrollTop = privateBox.scrollHeight;
       });
@@ -184,11 +189,11 @@
       btnSend.onclick = () => {
         const text = inputPrivate.value.trim();
         if(!text) return;
-        messagesRef.push({ uid: auth.currentUser.uid, text, timestamp: Date.now() });
+        const gender = "other"; // default en privado
+        messagesRef.push({ uid: auth.currentUser.uid, text, timestamp: Date.now(), gender });
         inputPrivate.value = "";
       };
     }
-
   </script>
 </body>
 </html>
