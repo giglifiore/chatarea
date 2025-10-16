@@ -7,22 +7,27 @@
     body { font-family: Arial; margin: 20px; }
     #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
     #status { color: green; margin-bottom: 10px; }
+    #private-chat-box { border: 1px solid blue; padding: 10px; margin-top: 10px; height: 200px; overflow-y: auto; }
+    .private-input { width: 70%; }
   </style>
 </head>
 <body>
   <h2>Chat Público por Zona 🌎</h2>
+  
   <label for="radius">Radio de visibilidad:</label>
-<select id="radius">
-  <option value="1">1 km</option>
-  <option value="5">5 km</option>
-  <option value="10">10 km</option>
-  <option value="50">50 km</option>
-</select>
+  <select id="radius">
+    <option value="1">1 km</option>
+    <option value="5">5 km</option>
+    <option value="10">10 km</option>
+    <option value="50">50 km</option>
+  </select>
 
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
   <input type="text" id="message" placeholder="Escribe un mensaje..." />
   <button id="send">Enviar</button>
+
+  <div id="private-chat-box" style="display:none"></div>
 
   <!-- Firebase SDK compat -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -30,16 +35,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
   <script>
-    // 🔧 Tu configuración de Firebase
+    // 🔧 Configuración de Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
-      authDomain: "chatarea-6170e.firebaseapp.com",
-      projectId: "chatarea-6170e",
-      storageBucket: "chatarea-6170e.firebasestorage.app",
-      messagingSenderId: "147913199399",
-      appId: "1:147913199399:web:886f09ab74017b3fc22302",
-      measurementId: "G-RECZQ87BG4",
-      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com" // ✅ importante
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROJECT_ID.firebaseapp.com",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_PROJECT_ID.appspot.com",
+      messagingSenderId: "TU_ID",
+      appId: "TU_APP_ID",
+      databaseURL: "https://TU_PROJECT_ID-default-rtdb.firebaseio.com"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -47,11 +51,13 @@
     const auth = firebase.auth();
 
     let userLat = 0, userLon = 0;
+    let chatRadius = 1.0;
+
     const chatBox = document.getElementById("chat-box");
     const input = document.getElementById("message");
     const sendBtn = document.getElementById("send");
-	let chatRadius = 1.0; // valor inicial en km
-	const radiusSelect = document.getElementById("radius");
+    const radiusSelect = document.getElementById("radius");
+    const privateBox = document.getElementById("private-chat-box");
 
     // 🔐 Login anónimo
     auth.signInAnonymously()
@@ -61,7 +67,7 @@
       })
       .catch(err => alert("Error al autenticar: " + err.message));
 
-    // 📍 Obtener ubicación del usuario
+    // 📍 Obtener ubicación
     function initLocation() {
       if (!navigator.geolocation) {
         alert("Tu navegador no soporta geolocalización");
@@ -71,19 +77,19 @@
         userLat = pos.coords.latitude;
         userLon = pos.coords.longitude;
         document.getElementById("status").innerText +=
-          ` | Ubicación detectada ('*')`;
+          ` | Ubicación detectada (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
         listenMessages();
       }, err => alert("Error de ubicación: " + err.message));
     }
-	
-	// Actualizar radio cuando cambie la selección
-radiusSelect.addEventListener("change", () => {
-  chatRadius = parseFloat(radiusSelect.value);
-  chatBox.innerHTML = ""; // opcional: limpiar mensajes antiguos
-  listenMessages(); // reiniciar escucha para aplicar el nuevo radio
-});
 
-    // ✉️ Enviar mensaje
+    // 📡 Cambiar radio
+    radiusSelect.addEventListener("change", () => {
+      chatRadius = parseFloat(radiusSelect.value);
+      chatBox.innerHTML = "";
+      listenMessages();
+    });
+
+    // ✉️ Enviar mensaje público
     sendBtn.addEventListener("click", () => {
       const text = input.value.trim();
       if (!text) return;
@@ -100,25 +106,37 @@ radiusSelect.addEventListener("change", () => {
       input.value = "";
     });
 
-    // 💬 Escuchar mensajes y mostrar solo los cercanos (1 km)
+    // 💬 Escuchar mensajes públicos
     function listenMessages() {
       const mensajesRef = db.ref("mensajes");
-      mensajesRef.off(); // evitar duplicados
+      mensajesRef.off();
       mensajesRef.on("child_added", snap => {
         const msg = snap.val();
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
-        if (dist <= chatRadius) { // mostrar solo mensajes dentro de 1 km
+        if (dist <= chatRadius) {
           const div = document.createElement("div");
           div.textContent = `${msg.text} (${dist.toFixed(2)} km)`;
+
+          // ✅ Botón chat privado si no es tu propio mensaje
+          if(msg.uid !== auth.currentUser.uid){
+            const btn = document.createElement("button");
+            btn.textContent = "Privado";
+            btn.style.marginLeft = "10px";
+            btn.addEventListener("click", () => {
+              openPrivateChat(msg.uid);
+            });
+            div.appendChild(btn);
+          }
+
           chatBox.appendChild(div);
           chatBox.scrollTop = chatBox.scrollHeight;
         }
       });
     }
 
-    // 📏 Función para calcular distancia en km
+    // 📏 Función para calcular distancia
     function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // radio de la Tierra en km
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2)**2 +
@@ -127,6 +145,40 @@ radiusSelect.addEventListener("change", () => {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     }
+
+    // 💙 Chat privado
+    function openPrivateChat(otherUid){
+      const chatId = [auth.currentUser.uid, otherUid].sort().join("_");
+      privateBox.style.display = "block";
+      privateBox.innerHTML = `<h4>Chat privado con ${otherUid}</h4>`;
+
+      const inputPrivate = document.createElement("input");
+      inputPrivate.className = "private-input";
+      inputPrivate.placeholder = "Escribe un mensaje...";
+      privateBox.appendChild(inputPrivate);
+
+      const btnSend = document.createElement("button");
+      btnSend.textContent = "Enviar";
+      privateBox.appendChild(btnSend);
+
+      const messagesRef = db.ref("chatsPrivados/" + chatId);
+      messagesRef.off();
+      messagesRef.on("child_added", snap => {
+        const m = snap.val();
+        const msgDiv = document.createElement("div");
+        msgDiv.textContent = `${m.uid}: ${m.text}`;
+        privateBox.appendChild(msgDiv);
+        privateBox.scrollTop = privateBox.scrollHeight;
+      });
+
+      btnSend.onclick = () => {
+        const text = inputPrivate.value.trim();
+        if (!text) return;
+        messagesRef.push({ uid: auth.currentUser.uid, text, timestamp: Date.now() });
+        inputPrivate.value = "";
+      };
+    }
+
   </script>
 </body>
 </html>
