@@ -123,7 +123,7 @@
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
         if (dist <= chatRadius) {
           const dateStr = new Date(msg.timestamp).toLocaleString();
-          const genderIcon = msg.gender === "male" ? "👨" : msg.gender === "female" ? "👩" : "🧑";
+          const genderIcon = msg.gender === "M" ? "♂️" : msg.gender === "F" ? "♀️" : "⚧";
           const div = document.createElement("div");
           div.textContent = `[${dateStr}] ${genderIcon} ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
 
