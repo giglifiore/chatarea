@@ -30,6 +30,11 @@
     <option value="F">♀️ Femenino</option>
     <option value="O">⚧ Otro</option>
   </select>
+  
+  <br>
+<label for="nickname">Nick:</label>
+<input type="text" id="nickname" placeholder="Tu apodo" />
+
 
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
@@ -69,6 +74,8 @@
     const radiusSelect = document.getElementById("radius");
     const privateBox = document.getElementById("private-chat-box");
     const genderSelect = document.getElementById("gender-select");
+	const nickname = document.getElementById("nickname").value.trim() || auth.currentUser.uid;
+
 
     let userRef = null;
 
@@ -127,6 +134,7 @@
         text,
         timestamp: Date.now(),
         uid: auth.currentUser ? auth.currentUser.uid : "anon",
+		nick: nickname,   
         lat: userLat,
         lon: userLon,
         gender
@@ -145,7 +153,7 @@
           const dateStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const genderIcon = msg.gender === "M" ? "♂️" : msg.gender === "F" ? "♀️" : "⚧";
           const div = document.createElement("div");
-          div.textContent = `[${dateStr}] ${genderIcon} ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
+          div.textContent = `[${dateStr}] ${genderIcon} ${msg.nick}: ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
 
           if(msg.uid !== auth.currentUser.uid){
             const btn = document.createElement("button");
@@ -212,7 +220,7 @@
     const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
     const msgDiv = document.createElement("div");
-    msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.uid}: ${m.text}`;
+    msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.nick}: ${m.uid}: ${m.text}`;
     privateBox.appendChild(msgDiv);
     privateBox.scrollTop = privateBox.scrollHeight;
   });
