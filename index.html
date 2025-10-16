@@ -7,17 +7,11 @@
     body { font-family: Arial; margin: 20px; }
     #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
     #status { color: green; margin-bottom: 10px; }
-    #private-container { margin-top: 20px; border-top: 2px solid #007bff; padding-top: 10px; }
-    #private-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-    .tab {
-      background: #007bff; color: white; padding: 5px 10px; border-radius: 8px;
-      cursor: pointer; display: flex; align-items: center;
-    }
-    .tab.active { background: #0056b3; }
-    .tab span { margin-left: 8px; color: #ffcccc; cursor: pointer; }
-    .private-chat-box {
-      display: none; border: 1px solid #007bff; padding: 10px; height: 200px; overflow-y: auto;
-    }
+    #private-chats { margin-top: 20px; }
+    .private-tab { display: inline-block; padding: 5px 10px; margin-right: 5px; background: #e8f0ff; border-radius: 5px; cursor: pointer; position: relative; }
+    .private-tab .close-btn { position: absolute; top: 0; right: 0; font-size: 12px; background: red; color: white; border: none; border-radius: 50%; width: 16px; height: 16px; cursor: pointer; line-height: 12px; padding: 0; }
+    .private-chat { display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; background: #f9f9f9; margin-top: 5px; max-height: 200px; overflow-y: auto; }
+    .private-chat.active { display: block; }
     .private-input { width: 70%; }
   </style>
 </head>
@@ -39,7 +33,7 @@
     <option value="F">♀️ Femenino</option>
     <option value="O">⚧ Otro</option>
   </select>
-  
+
   <br>
   <label for="nickname">Nick:</label>
   <input type="text" id="nickname" placeholder="Tu apodo" />
@@ -50,11 +44,11 @@
   <input type="text" id="message" placeholder="Escribe un mensaje..." />
   <button id="send">Enviar</button>
 
-  <!-- CONTENEDOR DE CHATS PRIVADOS -->
-  <div id="private-container">
+  <!-- Sección de chats privados -->
+  <div id="private-chats">
     <h3>Chats Privados 💬</h3>
     <div id="private-tabs"></div>
-    <div id="private-chat-area"></div>
+    <div id="private-boxes"></div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -71,205 +65,171 @@
       appId: "1:147913199399:web:886f09ab74017b3fc22302",
       databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
 
-    let userLat = 0, userLon = 0;
-    let chatRadius = 1.0;
-    let userRef = null;
-
+    let userLat = 0, userLon = 0, chatRadius = 1.0;
     const chatBox = document.getElementById("chat-box");
     const input = document.getElementById("message");
     const sendBtn = document.getElementById("send");
     const radiusSelect = document.getElementById("radius");
     const genderSelect = document.getElementById("gender-select");
     const nickInput = document.getElementById("nickname");
-    const tabsContainer = document.getElementById("private-tabs");
-    const privateArea = document.getElementById("private-chat-area");
 
-    const openChats = {}; // chatId -> { div, tab }
+    const privateTabs = document.getElementById("private-tabs");
+    const privateBoxes = document.getElementById("private-boxes");
 
-    // --- AUTENTICACIÓN ANÓNIMA ---
-    auth.signInAnonymously().then(() => {
-      const uid = auth.currentUser.uid;
-      userRef = db.ref("usuarios/" + uid);
-      document.getElementById("status").innerText = "Autenticado anónimamente ✅";
+    let userRef = null, currentUser = null;
+    const privateChats = {}; // Guardar referencia a chats privados abiertos
 
-      nickInput.addEventListener("change", () => {
-        const nick = nickInput.value.trim();
-        if (nick) userRef.update({ nick });
+    auth.signInAnonymously()
+      .then(() => {
+        currentUser = auth.currentUser;
+        userRef = db.ref("usuarios/" + currentUser.uid);
+        document.getElementById("status").innerText = "Autenticado anónimamente ✅";
+
+        nickInput.addEventListener("change", () => {
+          const nick = nickInput.value.trim();
+          if (nick) userRef.update({ nick });
+        });
+
+        userRef.once("value").then(snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            if (data.radio) { chatRadius = data.radio; radiusSelect.value = chatRadius; }
+            if (data.genero) { genderSelect.value = data.genero; }
+            if (data.nick) { nickInput.value = data.nick; }
+          }
+          initLocation();
+          listenPrivateChats();
+        });
       });
 
-      userRef.once("value").then(snap => {
-        const data = snap.val();
-        if (data) {
-          if (data.radio) { chatRadius = data.radio; radiusSelect.value = chatRadius; }
-          if (data.genero) { genderSelect.value = data.genero; }
-          if (data.nick) { nickInput.value = data.nick; }
-        }
-        initLocation();
-      });
-    });
-
-    // --- UBICACIÓN ---
     function initLocation() {
-      if (!navigator.geolocation) {
-        alert("Tu navegador no soporta geolocalización");
-        return;
-      }
+      if (!navigator.geolocation) { alert("No soporta geolocalización"); return; }
       navigator.geolocation.getCurrentPosition(pos => {
         userLat = pos.coords.latitude;
         userLon = pos.coords.longitude;
         document.getElementById("status").innerText +=
-          ` | Ubicación detectada (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
+          ` | Ubicación (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
         listenMessages();
       });
     }
 
-    // --- GUARDAR RADIO / GÉNERO ---
-    radiusSelect.addEventListener("change", () => {
-      chatRadius = parseFloat(radiusSelect.value);
-      if (userRef) userRef.update({ radio: chatRadius });
-      chatBox.innerHTML = "";
-      listenMessages();
-    });
-
-    genderSelect.addEventListener("change", () => {
-      const genero = genderSelect.value;
-      if (userRef) userRef.update({ genero });
-    });
-
-    // --- ENVIAR MENSAJE PÚBLICO ---
     sendBtn.addEventListener("click", () => {
-      const text = input.value.trim();
-      if (!text) return;
-      const msg = {
+      const text = input.value.trim(); if (!text) return;
+      const nick = nickInput.value.trim() || "Anon";
+      db.ref("mensajes").push({
         text,
         timestamp: Date.now(),
-        uid: auth.currentUser.uid,
-        nick: nickInput.value.trim() || "Anon",
+        uid: currentUser.uid,
+        nick,
         lat: userLat,
         lon: userLon,
         gender: genderSelect.value
-      };
-      db.ref("mensajes").push(msg);
+      });
       input.value = "";
     });
 
-    // --- ESCUCHAR MENSAJES ---
     function listenMessages() {
       const mensajesRef = db.ref("mensajes").orderByChild("timestamp");
       mensajesRef.off();
       mensajesRef.on("child_added", snap => {
         const msg = snap.val();
-        const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
-        if (dist <= chatRadius) {
-          const dateStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const genderIcon = msg.gender === "M" ? "♂️" : msg.gender === "F" ? "♀️" : "⚧";
+        const dist = getDistance(userLat,userLon,msg.lat,msg.lon);
+        if(dist <= chatRadius){
+          const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+          const genderIcon = msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
           const div = document.createElement("div");
           div.textContent = `[${dateStr}] ${genderIcon} ${msg.nick}: ${msg.text} (${dist.toFixed(2)} km)`;
-
-          if (msg.uid !== auth.currentUser.uid) {
+          if(msg.uid !== currentUser.uid){
             const btn = document.createElement("button");
             btn.textContent = "Privado";
-            btn.style.marginLeft = "10px";
-            btn.onclick = () => openPrivateChat(msg.uid, msg.nick);
+            btn.style.marginLeft="10px";
+            btn.onclick = ()=>openPrivateChat(msg.uid,msg.nick);
             div.appendChild(btn);
           }
-
           chatBox.appendChild(div);
           chatBox.scrollTop = chatBox.scrollHeight;
         }
       });
     }
 
-    // --- CALCULAR DISTANCIA ---
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) *
-                Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    function getDistance(lat1, lon1, lat2, lon2){
+      const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    // --- CHAT PRIVADO CON TABS ---
-    function openPrivateChat(otherUid, otherNick) {
-      const chatId = [auth.currentUser.uid, otherUid].sort().join("_");
-      if (openChats[chatId]) return setActiveChat(chatId);
+    function listenPrivateChats(){
+      const privateRef = db.ref("chatsPrivados");
+      privateRef.on("child_added", snap=>{
+        const chatId = snap.key;
+        if(chatId.includes(currentUser.uid)){
+          const otherUid = chatId.replace(currentUser.uid,'').replace('_','');
+          openPrivateChat(otherUid);
+        }
+      });
+    }
+
+    function openPrivateChat(otherUid, otherNick){
+      const chatId = [currentUser.uid,otherUid].sort().join("_");
+      if(privateChats[chatId]) return; // Ya abierto
 
       // Crear pestaña
       const tab = document.createElement("div");
-      tab.className = "tab";
-      tab.textContent = otherNick || otherUid.slice(0, 5);
-      const close = document.createElement("span");
-      close.textContent = "❌";
-      close.onclick = e => {
+      tab.className = "private-tab";
+      tab.textContent = `Chat: ${otherNick || otherUid}`;
+      const closeBtn = document.createElement("button");
+      closeBtn.className="close-btn";
+      closeBtn.textContent="×";
+      closeBtn.onclick = e=>{
         e.stopPropagation();
-        removeChat(chatId);
+        privateBoxes.removeChild(privateChats[chatId].box);
+        privateTabs.removeChild(tab);
+        delete privateChats[chatId];
       };
-      tab.appendChild(close);
-      tab.onclick = () => setActiveChat(chatId);
-      tabsContainer.appendChild(tab);
+      tab.appendChild(closeBtn);
+      tab.onclick = ()=>showChat(chatId);
+      privateTabs.appendChild(tab);
 
-      // Crear caja de mensajes
+      // Crear caja de chat
       const box = document.createElement("div");
-      box.className = "private-chat-box";
-      box.innerHTML = `<h4>Chat con ${otherNick || otherUid}</h4>`;
-      const inputP = document.createElement("input");
-      inputP.className = "private-input";
-      inputP.placeholder = "Escribe un mensaje...";
-      const sendP = document.createElement("button");
-      sendP.textContent = "Enviar";
-      box.appendChild(inputP);
-      box.appendChild(sendP);
-      privateArea.appendChild(box);
+      box.className="private-chat active";
+      privateBoxes.appendChild(box);
 
-      const ref = db.ref("chatsPrivados/" + chatId);
-      ref.on("child_added", s => {
-        const m = s.val();
-        const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
-        const d = document.createElement("div");
-        d.textContent = `[${dateStr}] ${genderIcon} ${m.nick}: ${m.text}`;
-        box.appendChild(d);
+      const inputPriv = document.createElement("input");
+      inputPriv.className="private-input";
+      inputPriv.placeholder="Mensaje...";
+      const btnSend = document.createElement("button");
+      btnSend.textContent="Enviar";
+      box.appendChild(inputPriv); box.appendChild(btnSend);
+
+      // Escuchar mensajes
+      const refRead = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+      refRead.on("child_added", snap=>{
+        const m = snap.val();
+        const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        const msgDiv = document.createElement("div");
+        msgDiv.textContent = `[${dateStr}] ${m.nick || "Anon"}: ${m.text}`;
+        box.appendChild(msgDiv);
         box.scrollTop = box.scrollHeight;
       });
 
-      sendP.onclick = () => {
-        const text = inputP.value.trim();
-        if (!text) return;
-        ref.push({
-          uid: auth.currentUser.uid,
-          text,
-          timestamp: Date.now(),
-          gender: genderSelect.value,
-          nick: nickInput.value.trim() || "Anon"
-        });
-        inputP.value = "";
+      btnSend.onclick = ()=>{
+        const text = inputPriv.value.trim(); if(!text) return;
+        db.ref("chatsPrivados/"+chatId).push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
+        inputPriv.value="";
       };
 
-      openChats[chatId] = { div: box, tab };
-      setActiveChat(chatId);
+      privateChats[chatId] = {tab, box};
+      showChat(chatId);
     }
 
-    function setActiveChat(chatId) {
-      Object.values(openChats).forEach(c => {
-        c.div.style.display = "none";
-        c.tab.classList.remove("active");
-      });
-      openChats[chatId].div.style.display = "block";
-      openChats[chatId].tab.classList.add("active");
-    }
-
-    function removeChat(chatId) {
-      openChats[chatId].div.remove();
-      openChats[chatId].tab.remove();
-      delete openChats[chatId];
-      const keys = Object.keys(openChats);
-      if (keys.length > 0) setActiveChat(keys[0]);
+    function showChat(chatId){
+      Object.values(privateChats).forEach(c=>c.box.classList.remove("active"));
+      privateChats[chatId].box.classList.add("active");
     }
   </script>
 </body>
