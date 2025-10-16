@@ -1,30 +1,23 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>Chat por Zona (Firebase Seguro)</title>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    #status { color: green; margin-bottom: 10px; }
-  </style>
-</head>
-<body>
-  <h2>Chat público por zona 🌎</h2>
-  <div id="status">Conectando...</div>
-  <div id="messages"></div>
-  <input id="msg" type="text" placeholder="Escribe un mensaje..." />
-  <button onclick="sendMsg()">Enviar</button>
+  <head>
+    <meta charset="UTF-8">
+    <title>Chat por Zona</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
+  </head>
+  <body>
+    <h2>Chat Público por Zona</h2>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/geofire@5.0.1/dist/geofire.min.js"></script>
+    <div id="chat-box" style="border:1px solid #ccc; height:300px; overflow:auto; padding:10px;"></div>
 
-  <script>
-    // 🔧 Configura Firebase con tus credenciales:
-    const firebaseConfig = {
+    <input type="text" id="message" placeholder="Escribe un mensaje..." />
+    <button id="send">Enviar</button>
+
+    <script>
+      // Tu configuración de Firebase
+       const firebaseConfig = {
       apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
       authDomain: "chatarea-6170e.firebaseapp.com",
       projectId: "chatarea-6170e",
@@ -35,107 +28,38 @@
       databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com" // ✅ importante
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-    const geoFireRef = db.ref("messages_geo");
-    const geoFire = new geofire.GeoFire(geoFireRef);
+      // Inicializar Firebase
+      const app = firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const auth = firebase.auth();
 
-    let userId = null;
-    let myLat = 0, myLon = 0;
-    let geoQuery = null;
-
-    // 🔐 Iniciar sesión anónima
-    auth.signInAnonymously()
-      .then(user => {
-        userId = user.user.uid;
-        document.getElementById("status").innerText = "Autenticado anónimamente ✅";
-        initLocation();
-      })
-      .catch(err => alert("Error al autenticar: " + err.message));
-
-    // 📍 Obtener ubicación
-    function initLocation(){
-      if (!navigator.geolocation) {
-        alert("Tu navegador no soporta geolocalización");
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(pos => {
-        myLat = pos.coords.latitude;
-        myLon = pos.coords.longitude;
-        document.getElementById("status").innerText +=
-          ` | Ubicación detectada (${myLat.toFixed(3)}, ${myLon.toFixed(3)})`;
-
-        // Iniciar escucha de mensajes en un radio de 1 km
-        startGeoQuery(1.0);
-        // ✅ Escucha general de nuevos mensajes (para mostrar en tiempo real)
-        listenToMessages();
-      }, err => alert("Error de ubicación: " + err.message));
-    }
-
-    // 📡 Iniciar geoQuery
-    function startGeoQuery(radiusKm){
-      geoQuery = geoFire.query({ center: [myLat, myLon], radius: radiusKm });
-
-      geoQuery.on("key_entered", async (key, location, distance) => {
-        const snap = await db.ref("messages/" + key).once("value");
-        const msg = snap.val();
-        if (msg) showMsg(msg.user, msg.text, distance);
+      // Login anónimo
+      auth.signInAnonymously().catch(error => {
+        console.error("Error al autenticar:", error);
       });
-    }
 
-    // ✅ Escuchar mensajes nuevos globalmente
-    function listenToMessages(){
-      db.ref("messages").on("child_added", snap => {
-        const msg = snap.val();
-        if (msg) {
-          const dist = calcDistance(myLat, myLon, msg.lat, msg.lon);
-          if (dist <= 1.0) { // solo mostrar si está dentro de 1 km
-            showMsg(msg.user, msg.text, dist);
-          }
-        }
+      const chatBox = document.getElementById("chat-box");
+      const input = document.getElementById("message");
+      const sendBtn = document.getElementById("send");
+
+      // Enviar mensaje
+      sendBtn.addEventListener("click", () => {
+        const text = input.value.trim();
+        if (text === "") return;
+
+        const msg = {
+          text,
+          timestamp: Date.now(),
+          uid: auth.currentUser ? auth.currentUser.uid : "anon"
+        };
+
+        firebase.database().ref("mensajes").push(msg);
+        input.value = "";
       });
-    }
 
-    // ✉️ Enviar mensaje
-    function sendMsg(){
-      const text = document.getElementById("msg").value.trim();
-      if (!text) return;
+      // Escuchar nuevos mensajes (solo se agrega una vez)
+      const mensajesRef = firebase.database().ref("mensajes");
+      mensajesRef.off(); // Evita duplicados si recargas el script
 
-      const user = "User-" + userId.substring(0,5);
-      const newMsgRef = db.ref("messages").push();
-      newMsgRef.set({
-        user,
-        text,
-        lat: myLat,
-        lon: myLon,
-        time: Date.now()
-      });
-      geoFire.set(newMsgRef.key, [myLat, myLon]);
-      document.getElementById("msg").value = "";
-    }
+      mensajesRef.on("child_added", snapshot =>_
 
-    // 💬 Mostrar mensaje
-    function showMsg(user, text, dist){
-      const div = document.createElement("div");
-      div.textContent = `${user} (${dist.toFixed(2)} km): ${text}`;
-      document.getElementById("messages").appendChild(div);
-      const msgBox = document.getElementById("messages");
-      msgBox.scrollTop = msgBox.scrollHeight;
-    }
-
-    // 📏 Calcular distancia (en km)
-    function calcDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // radio de la Tierra
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
-  </script>
-</body>
-</html>
