@@ -1,275 +1,184 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Chat por Zona 🌎</title>
+  <title>Chat Público y Privado</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    body { font-family: Arial; margin: 20px; }
-    #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    #status { color: green; margin-bottom: 10px; }
-    #private-container { margin-top: 20px; border-top: 2px solid #007bff; padding-top: 10px; }
-    #private-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-    .tab {
-      background: #007bff; color: white; padding: 5px 10px; border-radius: 8px;
-      cursor: pointer; display: flex; align-items: center;
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      margin: 20px;
     }
-    .tab.active { background: #0056b3; }
-    .tab span { margin-left: 8px; color: #ffcccc; cursor: pointer; }
-    .private-chat-box {
-      display: none; border: 1px solid #007bff; padding: 10px; height: 200px; overflow-y: auto;
+
+    #publicChat, #privateChats {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
     }
-    .private-input { width: 70%; }
+
+    #messages {
+      height: 200px;
+      overflow-y: scroll;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .privateBox {
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      margin: 5px 0;
+      padding: 8px;
+      background: #fafafa;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .privateHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      background: #007bff;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 6px 6px 0 0;
+    }
+
+    .privateMessages {
+      height: 150px;
+      overflow-y: auto;
+      background: white;
+      padding: 5px;
+      border-radius: 0 0 6px 6px;
+      border: 1px solid #ddd;
+    }
+
+    .closeBtn {
+      cursor: pointer;
+      color: white;
+      background: red;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <h2>Chat Público por Zona 🌎</h2>
-  
-  <label for="radius">Radio de visibilidad:</label>
-  <select id="radius">
-    <option value="1">1 km</option>
-    <option value="5">5 km</option>
-    <option value="10">10 km</option>
-    <option value="50">50 km</option>
-  </select>
 
-  <br>
-  <label for="gender">Género:</label>
-  <select id="gender-select">
-    <option value="M">♂️ Masculino</option>
-    <option value="F">♀️ Femenino</option>
-    <option value="O">⚧ Otro</option>
-  </select>
-  
-  <br>
-  <label for="nickname">Nick:</label>
-  <input type="text" id="nickname" placeholder="Tu apodo" />
-
-  <div id="status">Conectando...</div>
-  <div id="chat-box"></div>
-  
-  <input type="text" id="message" placeholder="Escribe un mensaje..." />
-  <button id="send">Enviar</button>
-
-  <!-- CONTENEDOR DE CHATS PRIVADOS -->
-  <div id="private-container">
-    <h3>Chats Privados 💬</h3>
-    <div id="private-tabs"></div>
-    <div id="private-chat-area"></div>
+  <h2>💬 Chat Público</h2>
+  <div id="publicChat">
+    <div id="messages"></div>
+    <input id="nickname" placeholder="Tu nick..." />
+    <input id="messageInput" placeholder="Escribe un mensaje..." />
+    <button id="btnSend">Enviar</button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <h2>🔒 Chats Privados</h2>
+  <div id="privateChats"></div>
 
   <script>
+    // ✅ Configuración Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
+      apiKey: "AIzaSyA8W-V0Ky5jCHuYFpoeTV4rUyy0CEg4iGc",
       authDomain: "chatarea-6170e.firebaseapp.com",
+      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com/",
       projectId: "chatarea-6170e",
-      storageBucket: "chatarea-6170e.firebasestorage.app",
+      storageBucket: "chatarea-6170e.appspot.com",
       messagingSenderId: "147913199399",
-      appId: "1:147913199399:web:886f09ab74017b3fc22302",
-      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
+      appId: "1:147913199399:web:886f09a77b83ae1efc0ae4"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const db = firebase.database();
+    const messagesRef = db.ref("publicMessages");
+    const privateChatsRef = db.ref("privateMessages");
+
+    const messagesDiv = document.getElementById("messages");
+    const btnSend = document.getElementById("btnSend");
+    const inputMessage = document.getElementById("messageInput");
+    const nicknameInput = document.getElementById("nickname");
+    const privateChatsDiv = document.getElementById("privateChats");
+
+    // ✅ Mostrar mensajes públicos
+    messagesRef.on("child_added", snapshot => {
+      const msg = snapshot.val();
+      const p = document.createElement("p");
+      p.textContent = `${msg.nick}: ${msg.text}`;
+      p.style.cursor = "pointer";
+
+      // Al hacer clic, abre chat privado
+      p.onclick = () => openPrivateChat(msg.nick);
+      messagesDiv.appendChild(p);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    // ✅ Enviar mensaje público
+    btnSend.onclick = () => {
+      const text = inputMessage.value.trim();
+      const nick = nicknameInput.value.trim() || "Anónimo";
+
+      if (text !== "") {
+        messagesRef.push({ nick, text });
+        inputMessage.value = "";
+      }
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    // ✅ Diccionario de chats privados abiertos
+    const openChats = {};
 
-    let userLat = 0, userLon = 0;
-    let chatRadius = 1.0;
-    let userRef = null;
+    function openPrivateChat(userNick) {
+      if (openChats[userNick]) return; // ya está abierto
 
-    const chatBox = document.getElementById("chat-box");
-    const input = document.getElementById("message");
-    const sendBtn = document.getElementById("send");
-    const radiusSelect = document.getElementById("radius");
-    const genderSelect = document.getElementById("gender-select");
-    const nickInput = document.getElementById("nickname");
-    const tabsContainer = document.getElementById("private-tabs");
-    const privateArea = document.getElementById("private-chat-area");
-
-    const openChats = {}; // chatId -> { div, tab }
-
-    // --- AUTENTICACIÓN ANÓNIMA ---
-    auth.signInAnonymously().then(() => {
-      const uid = auth.currentUser.uid;
-      userRef = db.ref("usuarios/" + uid);
-      document.getElementById("status").innerText = "Autenticado anónimamente ✅";
-
-      nickInput.addEventListener("change", () => {
-        const nick = nickInput.value.trim();
-        if (nick) userRef.update({ nick });
-      });
-
-      userRef.once("value").then(snap => {
-        const data = snap.val();
-        if (data) {
-          if (data.radio) { chatRadius = data.radio; radiusSelect.value = chatRadius; }
-          if (data.genero) { genderSelect.value = data.genero; }
-          if (data.nick) { nickInput.value = data.nick; }
-        }
-        initLocation();
-      });
-    });
-
-    // --- UBICACIÓN ---
-    function initLocation() {
-      if (!navigator.geolocation) {
-        alert("Tu navegador no soporta geolocalización");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(pos => {
-        userLat = pos.coords.latitude;
-        userLon = pos.coords.longitude;
-        document.getElementById("status").innerText +=
-          ` | Ubicación detectada (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
-        listenMessages();
-      });
-    }
-
-    // --- GUARDAR RADIO / GÉNERO ---
-    radiusSelect.addEventListener("change", () => {
-      chatRadius = parseFloat(radiusSelect.value);
-      if (userRef) userRef.update({ radio: chatRadius });
-      chatBox.innerHTML = "";
-      listenMessages();
-    });
-
-    genderSelect.addEventListener("change", () => {
-      const genero = genderSelect.value;
-      if (userRef) userRef.update({ genero });
-    });
-
-    // --- ENVIAR MENSAJE PÚBLICO ---
-    sendBtn.addEventListener("click", () => {
-      const text = input.value.trim();
-      if (!text) return;
-      const msg = {
-        text,
-        timestamp: Date.now(),
-        uid: auth.currentUser.uid,
-        nick: nickInput.value.trim() || "Anon",
-        lat: userLat,
-        lon: userLon,
-        gender: genderSelect.value
-      };
-      db.ref("mensajes").push(msg);
-      input.value = "";
-    });
-
-    // --- ESCUCHAR MENSAJES ---
-    function listenMessages() {
-      const mensajesRef = db.ref("mensajes").orderByChild("timestamp");
-      mensajesRef.off();
-      mensajesRef.on("child_added", snap => {
-        const msg = snap.val();
-        const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
-        if (dist <= chatRadius) {
-          const dateStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const genderIcon = msg.gender === "M" ? "♂️" : msg.gender === "F" ? "♀️" : "⚧";
-          const div = document.createElement("div");
-          div.textContent = `[${dateStr}] ${genderIcon} ${msg.nick}: ${msg.text} (${dist.toFixed(2)} km)`;
-
-          if (msg.uid !== auth.currentUser.uid) {
-            const btn = document.createElement("button");
-            btn.textContent = "Privado";
-            btn.style.marginLeft = "10px";
-            btn.onclick = () => openPrivateChat(msg.uid, msg.nick);
-            div.appendChild(btn);
-          }
-
-          chatBox.appendChild(div);
-          chatBox.scrollTop = chatBox.scrollHeight;
-        }
-      });
-    }
-
-    // --- CALCULAR DISTANCIA ---
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) *
-                Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    // --- CHAT PRIVADO CON TABS ---
-    function openPrivateChat(otherUid, otherNick) {
-      const chatId = [auth.currentUser.uid, otherUid].sort().join("_");
-      if (openChats[chatId]) return setActiveChat(chatId);
-
-      // Crear pestaña
-      const tab = document.createElement("div");
-      tab.className = "tab";
-      tab.textContent = otherNick || otherUid.slice(0, 5);
-      const close = document.createElement("span");
-      close.textContent = "❌";
-      close.onclick = e => {
-        e.stopPropagation();
-        removeChat(chatId);
-      };
-      tab.appendChild(close);
-      tab.onclick = () => setActiveChat(chatId);
-      tabsContainer.appendChild(tab);
-
-      // Crear caja de mensajes
       const box = document.createElement("div");
-      box.className = "private-chat-box";
-      box.innerHTML = `<h4>Chat con ${otherNick || otherUid}</h4>`;
-      const inputP = document.createElement("input");
-      inputP.className = "private-input";
-      inputP.placeholder = "Escribe un mensaje...";
-      const sendP = document.createElement("button");
-      sendP.textContent = "Enviar";
-      box.appendChild(inputP);
-      box.appendChild(sendP);
-      privateArea.appendChild(box);
+      box.className = "privateBox";
+      box.innerHTML = `
+        <div class="privateHeader">
+          <span>Chat con ${userNick}</span>
+          <button class="closeBtn">X</button>
+        </div>
+        <div class="privateMessages" id="chat_${userNick}"></div>
+        <input placeholder="Escribe a ${userNick}..." class="privateInput" />
+        <button class="sendPrivateBtn">Enviar</button>
+      `;
 
-      const ref = db.ref("chatsPrivados/" + chatId);
-      ref.on("child_added", s => {
-        const m = s.val();
-        const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
-        const d = document.createElement("div");
-        d.textContent = `[${dateStr}] ${genderIcon} ${m.nick}: ${m.text}`;
-        box.appendChild(d);
-        box.scrollTop = box.scrollHeight;
-      });
+      privateChatsDiv.appendChild(box);
+      openChats[userNick] = box;
 
-      sendP.onclick = () => {
-        const text = inputP.value.trim();
-        if (!text) return;
-        ref.push({
-          uid: auth.currentUser.uid,
-          text,
-          timestamp: Date.now(),
-          gender: genderSelect.value,
-          nick: nickInput.value.trim() || "Anon"
-        });
-        inputP.value = "";
+      const closeBtn = box.querySelector(".closeBtn");
+      closeBtn.onclick = () => {
+        box.remove();
+        delete openChats[userNick];
       };
 
-      openChats[chatId] = { div: box, tab };
-      setActiveChat(chatId);
-    }
+      const input = box.querySelector(".privateInput");
+      const sendBtn = box.querySelector(".sendPrivateBtn");
+      const msgContainer = box.querySelector(".privateMessages");
 
-    function setActiveChat(chatId) {
-      Object.values(openChats).forEach(c => {
-        c.div.style.display = "none";
-        c.tab.classList.remove("active");
+      // Mostrar mensajes privados
+      privateChatsRef.child(userNick).on("child_added", snap => {
+        const msg = snap.val();
+        const p = document.createElement("p");
+        p.textContent = `${msg.from}: ${msg.text}`;
+        msgContainer.appendChild(p);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
       });
-      openChats[chatId].div.style.display = "block";
-      openChats[chatId].tab.classList.add("active");
-    }
 
-    function removeChat(chatId) {
-      openChats[chatId].div.remove();
-      openChats[chatId].tab.remove();
-      delete openChats[chatId];
-      const keys = Object.keys(openChats);
-      if (keys.length > 0) setActiveChat(keys[0]);
+      // Enviar mensaje privado
+      sendBtn.onclick = () => {
+        const text = input.value.trim();
+        const nick = nicknameInput.value.trim() || "Anónimo";
+        if (text === "") return;
+
+        privateChatsRef.child(userNick).push({
+          from: nick,
+          text
+        });
+        input.value = "";
+      };
     }
   </script>
 </body>
