@@ -25,15 +25,15 @@
   <script>
     // 🔧 Configura Firebase con tus credenciales:
     const firebaseConfig = {
-  apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
-  authDomain: "chatarea-6170e.firebaseapp.com",
-  projectId: "chatarea-6170e",
-  storageBucket: "chatarea-6170e.firebasestorage.app",
-  messagingSenderId: "147913199399",
-  appId: "1:147913199399:web:886f09ab74017b3fc22302",
-  measurementId: "G-RECZQ87BG4",
-  databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
-};
+      apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
+      authDomain: "chatarea-6170e.firebaseapp.com",
+      projectId: "chatarea-6170e",
+      storageBucket: "chatarea-6170e.firebasestorage.app",
+      messagingSenderId: "147913199399",
+      appId: "1:147913199399:web:886f09ab74017b3fc22302",
+      measurementId: "G-RECZQ87BG4",
+      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com" // ✅ importante
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -69,6 +69,8 @@
 
         // Iniciar escucha de mensajes en un radio de 1 km
         startGeoQuery(1.0);
+        // ✅ Escucha general de nuevos mensajes (para mostrar en tiempo real)
+        listenToMessages();
       }, err => alert("Error de ubicación: " + err.message));
     }
 
@@ -80,6 +82,19 @@
         const snap = await db.ref("messages/" + key).once("value");
         const msg = snap.val();
         if (msg) showMsg(msg.user, msg.text, distance);
+      });
+    }
+
+    // ✅ Escuchar mensajes nuevos globalmente
+    function listenToMessages(){
+      db.ref("messages").on("child_added", snap => {
+        const msg = snap.val();
+        if (msg) {
+          const dist = calcDistance(myLat, myLon, msg.lat, msg.lon);
+          if (dist <= 1.0) { // solo mostrar si está dentro de 1 km
+            showMsg(msg.user, msg.text, dist);
+          }
+        }
       });
     }
 
@@ -108,6 +123,18 @@
       document.getElementById("messages").appendChild(div);
       const msgBox = document.getElementById("messages");
       msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    // 📏 Calcular distancia (en km)
+    function calcDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // radio de la Tierra
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
     }
   </script>
 </body>
