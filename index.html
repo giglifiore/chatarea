@@ -122,7 +122,7 @@
         const msg = snap.val();
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
         if (dist <= chatRadius) {
-          const dateStr = new Date(msg.timestamp).toLocaleString();
+          const dateStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const genderIcon = msg.gender === "M" ? "♂️" : msg.gender === "F" ? "♀️" : "⚧";
           const div = document.createElement("div");
           div.textContent = `[${dateStr}] ${genderIcon} ${msg.uid}: ${msg.text} (${dist.toFixed(2)} km)`;
