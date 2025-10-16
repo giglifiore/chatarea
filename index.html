@@ -7,7 +7,7 @@
     body { font-family: Arial; margin: 20px; }
     #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
     #status { color: green; margin-bottom: 10px; }
-    #private-chat-box { border: 1px solid blue; padding: 10px; margin-top: 10px; height: 200px; overflow-y: auto; }
+    #private-chat-box { border: 1px solid blue; padding: 10px; margin-top: 10px; height: 200px; overflow-y: auto; display:none;}
     .private-input { width: 70%; }
   </style>
 </head>
@@ -27,7 +27,7 @@
   <input type="text" id="message" placeholder="Escribe un mensaje..." />
   <button id="send">Enviar</button>
 
-  <div id="private-chat-box" style="display:none"></div>
+  <div id="private-chat-box"></div>
 
   <!-- Firebase SDK compat -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -61,11 +61,14 @@
     const radiusSelect = document.getElementById("radius");
     const privateBox = document.getElementById("private-chat-box");
 
+    let currentPrivateChatId = null;
+
     // 🔐 Login anónimo
     auth.signInAnonymously()
       .then(() => {
         document.getElementById("status").innerText = "Autenticado anónimamente ✅";
         initLocation();
+        listenPrivateChats(); // <-- listener global de chats privados
       })
       .catch(err => alert("Error al autenticar: " + err.message));
 
@@ -119,7 +122,7 @@
           const div = document.createElement("div");
           div.textContent = `${msg.text} (${dist.toFixed(2)} km)`;
 
-          // ✅ Botón chat privado si no es tu propio mensaje
+          // Botón chat privado
           if(msg.uid !== auth.currentUser.uid){
             const btn = document.createElement("button");
             btn.textContent = "Privado";
@@ -148,9 +151,27 @@
       return R * c;
     }
 
-    // 💙 Chat privado
+    // 💙 Abrir chat privado manual
     function openPrivateChat(otherUid){
       const chatId = [auth.currentUser.uid, otherUid].sort().join("_");
+      showPrivateChat(chatId, otherUid);
+    }
+
+    // 🔔 Listener global de chats privados
+    function listenPrivateChats() {
+      const privateRef = db.ref("chatsPrivados");
+      privateRef.on("child_added", snap => {
+        const chatId = snap.key;
+        if(chatId.includes(auth.currentUser.uid)){
+          const otherUid = chatId.replace(auth.currentUser.uid, '').replace('_','');
+          showPrivateChat(chatId, otherUid);
+        }
+      });
+    }
+
+    function showPrivateChat(chatId, otherUid) {
+      if(currentPrivateChatId === chatId) return; // ya abierto
+      currentPrivateChatId = chatId;
       privateBox.style.display = "block";
       privateBox.innerHTML = `<h4>Chat privado con ${otherUid}</h4>`;
 
@@ -175,7 +196,7 @@
 
       btnSend.onclick = () => {
         const text = inputPrivate.value.trim();
-        if (!text) return;
+        if(!text) return;
         messagesRef.push({ uid: auth.currentUser.uid, text, timestamp: Date.now() });
         inputPrivate.value = "";
       };
