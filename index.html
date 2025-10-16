@@ -49,6 +49,8 @@
     const chatBox = document.getElementById("chat-box");
     const input = document.getElementById("message");
     const sendBtn = document.getElementById("send");
+	let chatRadius = 1.0; // valor inicial en km
+	const radiusSelect = document.getElementById("radius");
 
     // 🔐 Login anónimo
     auth.signInAnonymously()
@@ -72,6 +74,13 @@
         listenMessages();
       }, err => alert("Error de ubicación: " + err.message));
     }
+	
+	// Actualizar radio cuando cambie la selección
+radiusSelect.addEventListener("change", () => {
+  chatRadius = parseFloat(radiusSelect.value);
+  chatBox.innerHTML = ""; // opcional: limpiar mensajes antiguos
+  listenMessages(); // reiniciar escucha para aplicar el nuevo radio
+});
 
     // ✉️ Enviar mensaje
     sendBtn.addEventListener("click", () => {
@@ -97,7 +106,7 @@
       mensajesRef.on("child_added", snap => {
         const msg = snap.val();
         const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
-        if (dist <= 1.0) { // mostrar solo mensajes dentro de 1 km
+        if (dist <= chatRadius) { // mostrar solo mensajes dentro de 1 km
           const div = document.createElement("div");
           div.textContent = `${msg.text} (${dist.toFixed(2)} km)`;
           chatBox.appendChild(div);
