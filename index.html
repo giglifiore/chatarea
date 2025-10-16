@@ -189,40 +189,43 @@
     }
 
     function showPrivateChat(chatId, otherUid) {
-      if(currentPrivateChatId === chatId) return;
-      currentPrivateChatId = chatId;
-      privateBox.style.display = "block";
-      privateBox.innerHTML = `<h4>Chat privado con ${otherUid}</h4>`;
+  if(currentPrivateChatId === chatId) return;
+  currentPrivateChatId = chatId;
+  privateBox.style.display = "block";
+  privateBox.innerHTML = `<h4>Chat privado con ${otherUid}</h4>`;
 
-      const inputPrivate = document.createElement("input");
-      inputPrivate.className = "private-input";
-      inputPrivate.placeholder = "Escribe un mensaje...";
-      privateBox.appendChild(inputPrivate);
+  const inputPrivate = document.createElement("input");
+  inputPrivate.className = "private-input";
+  inputPrivate.placeholder = "Escribe un mensaje...";
+  privateBox.appendChild(inputPrivate);
 
-      const btnSend = document.createElement("button");
-      btnSend.textContent = "Enviar";
-      privateBox.appendChild(btnSend);
+  const btnSend = document.createElement("button");
+  btnSend.textContent = "Enviar";
+  privateBox.appendChild(btnSend);
 
-      const messagesRef = db.ref("chatsPrivados/" + chatId).orderByChild("timestamp");
-      messagesRef.off();
-      messagesRef.on("child_added", snap => {
-        const m = snap.val();
-        const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.uid}: ${m.text}`;
-        privateBox.appendChild(msgDiv);
-        privateBox.scrollTop = privateBox.scrollHeight;
-      });
+  const messagesRefRead = db.ref("chatsPrivados/" + chatId).orderByChild("timestamp"); // lectura
+  const messagesRefWrite = db.ref("chatsPrivados/" + chatId); // escritura
 
-      btnSend.onclick = () => {
-        const text = inputPrivate.value.trim();
-        if(!text) return;
-        const gender = genderSelect.value;
-        messagesRef.push({ uid: auth.currentUser.uid, text, timestamp: Date.now(), gender });
-        inputPrivate.value = "";
-      };
-    }
+  messagesRefRead.off();
+  messagesRefRead.on("child_added", snap => {
+    const m = snap.val();
+    const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const genderIcon = m.gender === "M" ? "♂️" : m.gender === "F" ? "♀️" : "⚧";
+    const msgDiv = document.createElement("div");
+    msgDiv.textContent = `[${dateStr}] ${genderIcon} ${m.uid}: ${m.text}`;
+    privateBox.appendChild(msgDiv);
+    privateBox.scrollTop = privateBox.scrollHeight;
+  });
+
+  btnSend.onclick = () => {
+    const text = inputPrivate.value.trim();
+    if(!text) return;
+    const gender = genderSelect.value;
+    messagesRefWrite.push({ uid: auth.currentUser.uid, text, timestamp: Date.now(), gender });
+    inputPrivate.value = "";
+  };
+}
+
   </script>
 </body>
 </html>
