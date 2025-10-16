@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chat por Zona (Firebase Seguro)</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    #status { color: green; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Chat público por zona 🌎</h2>
+  <div id="status">Conectando...</div>
+  <div id="messages"></div>
+  <input id="msg" type="text" placeholder="Escribe un mensaje..." />
+  <button onclick="sendMsg()">Enviar</button>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/geofire@5.0.1/dist/geofire.min.js"></script>
+
+  <script>
+    // 🔧 Configura Firebase con tus credenciales:
+    const firebaseConfig = {
+  apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
+  authDomain: "chatarea-6170e.firebaseapp.com",
+  projectId: "chatarea-6170e",
+  storageBucket: "chatarea-6170e.firebasestorage.app",
+  messagingSenderId: "147913199399",
+  appId: "1:147913199399:web:886f09ab74017b3fc22302",
+  measurementId: "G-RECZQ87BG4"
+};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const geoFireRef = db.ref("messages_geo");
+    const geoFire = new geofire.GeoFire(geoFireRef);
+
+    let userId = null;
+    let myLat = 0, myLon = 0;
+    let geoQuery = null;
+
+    // 🔐 Iniciar sesión anónima
+    auth.signInAnonymously()
+      .then(user => {
+        userId = user.user.uid;
+        document.getElementById("status").innerText = "Autenticado anónimamente ✅";
+        initLocation();
+      })
+      .catch(err => alert("Error al autenticar: " + err.message));
+
+    // 📍 Obtener ubicación
+    function initLocation(){
+      if (!navigator.geolocation) {
+        alert("Tu navegador no soporta geolocalización");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(pos => {
+        myLat = pos.coords.latitude;
+        myLon = pos.coords.longitude;
+        document.getElementById("status").innerText +=
+          ` | Ubicación detectada (${myLat.toFixed(3)}, ${myLon.toFixed(3)})`;
+
+        // Iniciar escucha de mensajes en un radio de 1 km
+        startGeoQuery(1.0);
+      }, err => alert("Error de ubicación: " + err.message));
+    }
+
+    // 📡 Iniciar geoQuery
+    function startGeoQuery(radiusKm){
+      geoQuery = geoFire.query({ center: [myLat, myLon], radius: radiusKm });
+
+      geoQuery.on("key_entered", async (key, location, distance) => {
+        const snap = await db.ref("messages/" + key).once("value");
+        const msg = snap.val();
+        if (msg) showMsg(msg.user, msg.text, distance);
+      });
+    }
+
+    // ✉️ Enviar mensaje
+    function sendMsg(){
+      const text = document.getElementById("msg").value.trim();
+      if (!text) return;
+
+      const user = "User-" + userId.substring(0,5);
+      const newMsgRef = db.ref("messages").push();
+      newMsgRef.set({
+        user,
+        text,
+        lat: myLat,
+        lon: myLon,
+        time: Date.now()
+      });
+      geoFire.set(newMsgRef.key, [myLat, myLon]);
+      document.getElementById("msg").value = "";
+    }
+
+    // 💬 Mostrar mensaje
+    function showMsg(user, text, dist){
+      const div = document.createElement("div");
+      div.textContent = `${user} (${dist.toFixed(2)} km): ${text}`;
+      document.getElementById("messages").appendChild(div);
+      const msgBox = document.getElementById("messages");
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
