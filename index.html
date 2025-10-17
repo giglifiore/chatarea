@@ -67,6 +67,7 @@
 </style>
 </head>
 <body>
+<link rel="manifest" href="/manifest.json">
 
 <h2>La Chismosa 🌎</h2>
 
@@ -304,5 +305,11 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.remove("has-new"); // quitar indicador al abrir
 }
 </script>
+<script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
+  }
+</script>
+
 </body>
 </html>
