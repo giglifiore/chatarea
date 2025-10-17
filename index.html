@@ -270,6 +270,8 @@ function createPrivateChat(chatId, otherUid, otherNick){
   box.appendChild(inputContainer);
 
   const ref = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+  
+  let initialLoad = true; // <-- flag para ignorar mensajes existentes
   ref.on("child_added", snap=>{
     const m = snap.val();
     const d = document.createElement("div");
@@ -277,10 +279,14 @@ function createPrivateChat(chatId, otherUid, otherNick){
     d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
     msgBox.appendChild(d);
     msgBox.scrollTop = msgBox.scrollHeight;
-    if(!box.classList.contains("active")){
-      tab.classList.add("has-new"); // notificación mensaje nuevo
+
+    if(!box.classList.contains("active") && !initialLoad){
+      tab.classList.add("has-new"); // solo para mensajes nuevos
     }
   });
+
+  // Después de un pequeño delay, se considera que el initial load terminó
+  setTimeout(()=>{ initialLoad = false; }, 500);
 
   btnP.addEventListener("click", ()=>{
     const text = inputP.value.trim();
@@ -291,6 +297,7 @@ function createPrivateChat(chatId, otherUid, otherNick){
 
   privateChats[chatId] = {tab, box, ref};
 }
+
 
 function openPrivateChat(otherUid, otherNick){
   const chatId = [currentUser.uid, otherUid].sort().join("_");
