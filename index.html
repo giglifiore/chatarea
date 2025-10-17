@@ -56,7 +56,7 @@
   #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
   #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
 
-  /* Notificación de nuevo mensaje en pestaña privada */
+  /* Notificación de nuevo mensaje */
   .private-tab.has-new { background: #ff4d4f; color: white; }
   .private-tab.has-new:hover { background: #e64545; }
 </style>
@@ -119,109 +119,111 @@ const db = firebase.database();
 const auth = firebase.auth();
 
 let userLat=0, userLon=0, chatRadius=1.0;
-const chatBox = document.getElementById("chat-box");
-const input = document.getElementById("message");
-const sendBtn = document.getElementById("send");
-const radiusSelect = document.getElementById("radius");
-const genderSelect = document.getElementById("gender-select");
-const nickInput = document.getElementById("nickname");
-
-const privateTabs = document.getElementById("private-tabs");
-const privateBoxes = document.getElementById("private-boxes");
-let userRef = null, currentUser = null;
-const privateChats = {};
+const chatBox=document.getElementById("chat-box");
+const input=document.getElementById("message");
+const sendBtn=document.getElementById("send");
+const radiusSelect=document.getElementById("radius");
+const genderSelect=document.getElementById("gender-select");
+const nickInput=document.getElementById("nickname");
+const privateTabs=document.getElementById("private-tabs");
+const privateBoxes=document.getElementById("private-boxes");
+let userRef=null,currentUser=null;
+const privateChats={};
 
 auth.signInAnonymously().then(()=>{
-  currentUser = auth.currentUser;
-  userRef = db.ref("usuarios/"+currentUser.uid);
-  document.getElementById("status").innerText = "Autenticado ✅";
+  currentUser=auth.currentUser;
+  userRef=db.ref("usuarios/"+currentUser.uid);
+  document.getElementById("status").innerText="Autenticado ✅";
 
-  nickInput.addEventListener("change", ()=>{ const nick = nickInput.value.trim(); if(nick) userRef.update({nick}); });
-  radiusSelect.addEventListener("change", ()=>userRef.update({radio: radiusSelect.value}));
-  genderSelect.addEventListener("change", ()=>userRef.update({genero: genderSelect.value}));
+  nickInput.addEventListener("change", ()=>{ const nick=nickInput.value.trim(); if(nick) userRef.update({nick}); });
+  radiusSelect.addEventListener("change", ()=>userRef.update({radio:radiusSelect.value}));
+  genderSelect.addEventListener("change", ()=>userRef.update({genero:genderSelect.value}));
 
   userRef.once("value").then(snapshot=>{
-    const data = snapshot.val() || {};
-    if(data.radio) { chatRadius = data.radio; radiusSelect.value = chatRadius; }
-    if(data.genero) genderSelect.value = data.genero;
-    if(data.nick) nickInput.value = data.nick;
+    const data=snapshot.val()||{};
+    if(data.radio){chatRadius=data.radio;radiusSelect.value=chatRadius;}
+    if(data.genero)genderSelect.value=data.genero;
+    if(data.nick)nickInput.value=data.nick;
     initLocation();
     listenPrivateChats();
   });
 });
 
 function initLocation(){
-  if(!navigator.geolocation){ alert("No soporta geolocalización"); return; }
+  if(!navigator.geolocation){alert("No soporta geolocalización");return;}
   navigator.geolocation.getCurrentPosition(pos=>{
-    userLat = pos.coords.latitude;
-    userLon = pos.coords.longitude;
-    document.getElementById("status").innerText += " | Ubicación activa";
+    userLat=pos.coords.latitude;
+    userLon=pos.coords.longitude;
+    document.getElementById("status").innerText+=" | Ubicación activa";
     listenMessages();
   });
 }
 
-sendBtn.addEventListener("click", ()=>{
-  const text = input.value.trim();
-  if(!text) return;
-  const nick = nickInput.value.trim()||"Anon";
-  db.ref("mensajes").push({text, timestamp: Date.now(), uid: currentUser.uid, nick, lat:userLat, lon:userLon, gender:genderSelect.value});
+// Enviar mensaje con botón o Enter
+function sendPublicMessage(){
+  const text=input.value.trim();
+  if(!text)return;
+  const nick=nickInput.value.trim()||"Anon";
+  db.ref("mensajes").push({text,timestamp:Date.now(),uid:currentUser.uid,nick,lat:userLat,lon:userLon,gender:genderSelect.value});
   input.value="";
-});
+}
+sendBtn.addEventListener("click", sendPublicMessage);
+input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPublicMessage(); } });
 
 function listenMessages(){
-  const ref = db.ref("mensajes").orderByChild("timestamp");
+  const ref=db.ref("mensajes").orderByChild("timestamp");
   ref.off();
   ref.on("child_added", snap=>{
-    const msg = snap.val();
-    const dist = getDistance(userLat,userLon,msg.lat,msg.lon);
-    if(dist <= chatRadius){
-      const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      const icon = msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
-      const div = document.createElement("div");
-      div.textContent = `[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
+    const msg=snap.val();
+    const dist=getDistance(userLat,userLon,msg.lat,msg.lon);
+    if(dist<=chatRadius){
+      const dateStr=new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      const icon=msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
+      const div=document.createElement("div");
+      div.textContent=`[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
       if(msg.uid!==currentUser.uid){
-        const btn = document.createElement("button");
-        btn.textContent = "Privado"; btn.style.marginLeft="10px";
-        btn.onclick = ()=>openPrivateChat(msg.uid, msg.nick);
+        const btn=document.createElement("button");
+        btn.textContent="Privado";
+        btn.onclick=()=>openPrivateChat(msg.uid,msg.nick);
         div.appendChild(btn);
       }
       chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      chatBox.scrollTop=chatBox.scrollHeight;
     }
   });
 }
 
-function getDistance(lat1, lon1, lat2, lon2){
-  const R = 6371;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function getDistance(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
 // ==================== Chats privados ====================
 function listenPrivateChats(){
-  const ref = db.ref("chatsPrivados");
+  const ref=db.ref("chatsPrivados");
   ref.on("child_added", snap=>{
-    const chatId = snap.key;
-    if(chatId.includes(currentUser.uid) && !privateChats[chatId]){
-      const otherUid = chatId.replace(currentUser.uid,'').replace('_','');
+    const chatId=snap.key;
+    if(chatId.includes(currentUser.uid)&&!privateChats[chatId]){
+      const otherUid=chatId.replace(currentUser.uid,'').replace('_','');
       db.ref("usuarios/"+otherUid).once("value").then(snapNick=>{
-        const otherNick = snapNick.val()?.nick || otherUid;
-        createPrivateChat(chatId, otherUid, otherNick);
+        const otherNick=snapNick.val()?.nick||otherUid;
+        createPrivateChat(chatId,otherUid,otherNick);
       });
     }
   });
 }
 
-function createPrivateChat(chatId, otherUid, otherNick){
-  const tab = document.createElement("div");
-  tab.className = "private-tab";
-  tab.textContent = otherNick;
+function createPrivateChat(chatId,otherUid,otherNick){
+  const tab=document.createElement("div");
+  tab.className="private-tab";
+  tab.textContent=otherNick;
 
-  const closeBtn = document.createElement("button");
-  closeBtn.className = "close-btn";
-  closeBtn.textContent = "×";
+  const closeBtn=document.createElement("button");
+  closeBtn.className="close-btn";
+  closeBtn.textContent="×";
   closeBtn.addEventListener("click", e=>{
     e.stopPropagation();
     if(privateChats[chatId].ref) privateChats[chatId].ref.off();
@@ -233,75 +235,73 @@ function createPrivateChat(chatId, otherUid, otherNick){
   tab.addEventListener("click", ()=>showChat(chatId));
   privateTabs.appendChild(tab);
 
-  const box = document.createElement("div");
-  box.className = "private-chat";
+  const box=document.createElement("div");
+  box.className="private-chat";
   privateBoxes.appendChild(box);
 
-  const msgBox = document.createElement("div");
-  msgBox.style.flex = "1";
-  msgBox.style.overflowY = "auto";
+  const msgBox=document.createElement("div");
+  msgBox.style.flex="1";
+  msgBox.style.overflowY="auto";
   box.appendChild(msgBox);
 
-  const inputContainer = document.createElement("div");
-  inputContainer.style.display = "flex";
-  inputContainer.style.gap = "5px";
-  const inputP = document.createElement("input");
-  inputP.placeholder = "Mensaje...";
-  const btnP = document.createElement("button");
-  btnP.textContent = "Enviar";
+  const inputContainer=document.createElement("div");
+  inputContainer.style.display="flex";
+  inputContainer.style.gap="5px";
+  const inputP=document.createElement("input");
+  inputP.placeholder="Mensaje...";
+  const btnP=document.createElement("button");
+  btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
   inputContainer.appendChild(btnP);
   box.appendChild(inputContainer);
 
- const chatRef = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-
-// 1️⃣ Cargar mensajes existentes
-chatRef.once("value").then(snapshot=>{
-  let lastTimestamp = 0;
-  snapshot.forEach(child=>{
-    const m = child.val();
-    appendPrivateMessage(m, msgBox, false); // no marcar como nuevo
-    if(m.timestamp > lastTimestamp) lastTimestamp = m.timestamp;
+  const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+  chatRef.once("value").then(snapshot=>{
+    let lastTimestamp=0;
+    snapshot.forEach(child=>{
+      const m=child.val();
+      appendPrivateMessage(m,msgBox,false);
+      if(m.timestamp>lastTimestamp) lastTimestamp=m.timestamp;
+    });
+    chatRef.startAt(lastTimestamp+1).on("child_added", snap=>{
+      const m=snap.val();
+      appendPrivateMessage(m,msgBox,true);
+    });
   });
 
-  // 2️⃣ Escuchar solo mensajes nuevos
-  chatRef.startAt(lastTimestamp + 1).on("child_added", snap=>{
-    const m = snap.val();
-    appendPrivateMessage(m, msgBox, true); // marcar como nuevo
-  });
-});
+  // Enviar con botón o Enter
+  function sendPrivate(){
+    const text=inputP.value.trim();
+    if(!text)return;
+    chatRef.ref.push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
+    inputP.value="";
+  }
+  btnP.addEventListener("click", sendPrivate);
+  inputP.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPrivate(); } });
 
-
-  btnP.addEventListener("click", ()=>{
-    const text = inputP.value.trim();
-    if(!text) return;
-    chatRef.push({uid:currentUser.uid, nick:nickInput.value||"Anon", text, timestamp:Date.now()});
-    inputP.value = "";
-  });
-
-  privateChats[chatId] = {tab, box, ref: chatRef};
+  privateChats[chatId]={tab,box,ref:chatRef};
 }
 
-function appendPrivateMessage(m, msgBox, isNew){
-  const d = document.createElement("div");
-  const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
+function appendPrivateMessage(m,msgBox,isNew){
+  const d=document.createElement("div");
+  const dateStr=new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  d.textContent=`[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
   msgBox.appendChild(d);
-  msgBox.scrollTop = msgBox.scrollHeight;
+  msgBox.scrollTop=msgBox.scrollHeight;
 
   if(isNew){
-    const chatId = Object.keys(privateChats).find(id=>privateChats[id].box===msgBox.parentNode);
-    const tab = privateChats[chatId].tab;
+    const chatId=Object.keys(privateChats).find(id=>privateChats[id].box===msgBox.parentNode);
+    const tab=privateChats[chatId].tab;
     if(!privateChats[chatId].box.classList.contains("active")){
       tab.classList.add("has-new");
     }
   }
 }
 
-function openPrivateChat(otherUid, otherNick){
-  const chatId = [currentUser.uid, otherUid].sort().join("_");
-  if(privateChats[chatId]) { showChat(chatId); return; }
-  createPrivateChat(chatId, otherUid, otherNick);
+function openPrivateChat(otherUid,otherNick){
+  const chatId=[currentUser.uid,otherUid].sort().join("_");
+  if(privateChats[chatId]){showChat(chatId);return;}
+  createPrivateChat(chatId,otherUid,otherNick);
   showChat(chatId);
 }
 
@@ -315,9 +315,9 @@ function showChat(chatId){
 </script>
 
 <script>
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
-  }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
+}
 </script>
 
 </body>
