@@ -1,10 +1,7 @@
 const CACHE_NAME = 'la-chismosa-cache-v1';
 const FILES_TO_CACHE = [
   '/',
-  '/index.html',
-  '/style.css',
-  '/script.js',
-  '/favicon.ico'
+  '/index.html'
 ];
 
 // Instalación: cachear archivos
