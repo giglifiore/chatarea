@@ -86,8 +86,8 @@
 
       <label for="gender">Género:</label>
       <select id="gender-select">
-        <option value="M">♂️ M</option>
-        <option value="F">♀️ F</option>
+        <option value="M">♂️ Masculino</option>
+        <option value="F">♀️ Femenino</option>
         <option value="O">⚧ Otro</option>
       </select>
 
@@ -166,7 +166,7 @@
       if(!navigator.geolocation){ alert("No soporta geolocalización"); return; }
       navigator.geolocation.getCurrentPosition(pos=>{
         userLat=pos.coords.latitude; userLon=pos.coords.longitude;
-        document.getElementById("status").innerText+=` | Ubicación ('*')`;
+        document.getElementById("status").innerText+=` | Ubicación (${userLat.toFixed(3)}, ${userLon.toFixed(3)})`;
         listenMessages();
       });
     }
