@@ -208,11 +208,8 @@ function getDistance(lat1, lon1, lat2, lon2){
 }
 
 // ==================== Chats privados con notificación ====================
-// ==================== Chats privados con notificación ====================
 function listenPrivateChats(){
   const ref = db.ref("chatsPrivados");
-  
-  // Detectar nuevos chats que involucren al usuario
   ref.on("child_added", snap=>{
     const chatId = snap.key;
     if(chatId.includes(currentUser.uid) && !privateChats[chatId]){
@@ -223,17 +220,25 @@ function listenPrivateChats(){
       });
     }
   });
+
+  ref.on("child_changed", snap=>{
+    const chatId = snap.key;
+    if(chatId.includes(currentUser.uid) && privateChats[chatId]){
+      const box = privateChats[chatId].box;
+      if(!box.classList.contains("active")){
+        privateChats[chatId].tab.classList.add("has-new"); // notificación visual
+      }
+    }
+  });
 }
 
-// Función para crear el chat privado
 function createPrivateChat(chatId, otherUid, otherNick){
   const tab = document.createElement("div");
   tab.className = "private-tab";
   tab.textContent = otherNick;
 
   const closeBtn = document.createElement("button");
-  closeBtn.className = "close-btn";
-  closeBtn.textContent = "×";
+  closeBtn.className = "close-btn"; closeBtn.textContent = "×";
   closeBtn.addEventListener("click", e=>{
     e.stopPropagation();
     if(privateChats[chatId].ref) privateChats[chatId].ref.off();
@@ -255,8 +260,7 @@ function createPrivateChat(chatId, otherUid, otherNick){
   box.appendChild(msgBox);
 
   const inputContainer = document.createElement("div");
-  inputContainer.style.display = "flex";
-  inputContainer.style.gap = "5px";
+  inputContainer.style.display = "flex"; inputContainer.style.gap = "5px";
   const inputP = document.createElement("input");
   inputP.placeholder = "Mensaje...";
   const btnP = document.createElement("button");
@@ -265,61 +269,36 @@ function createPrivateChat(chatId, otherUid, otherNick){
   inputContainer.appendChild(btnP);
   box.appendChild(inputContainer);
 
-  // =================== Listener de mensajes ===================
   const ref = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-
-  let initialLoadDone = false; // <-- Flag para ignorar mensajes existentes
-  ref.once("value", snap=>{
-    // Cargar mensajes existentes sin marcar notificación
-    snap.forEach(child=>{
-      const m = child.val();
-      appendPrivateMessage(m, msgBox, false); // false = no es nuevo
-    });
-    initialLoadDone = true; // Ahora los próximos mensajes sí son nuevos
-  });
-
-  // Escuchar mensajes nuevos
+  
+  let initialLoad = true; // <-- flag para ignorar mensajes existentes
   ref.on("child_added", snap=>{
     const m = snap.val();
-    if(initialLoadDone){
-      appendPrivateMessage(m, msgBox, true); // true = mensaje nuevo
+    const d = document.createElement("div");
+    const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
+    msgBox.appendChild(d);
+    msgBox.scrollTop = msgBox.scrollHeight;
+
+    if(!box.classList.contains("active") && !initialLoad){
+      tab.classList.add("has-new"); // solo para mensajes nuevos
     }
   });
+
+  // Después de un pequeño delay, se considera que el initial load terminó
+  setTimeout(()=>{ initialLoad = false; }, 500);
 
   btnP.addEventListener("click", ()=>{
     const text = inputP.value.trim();
     if(!text) return;
-    db.ref("chatsPrivados/"+chatId).push({
-      uid: currentUser.uid,
-      nick: nickInput.value || "Anon",
-      text,
-      timestamp: Date.now()
-    });
+    db.ref("chatsPrivados/"+chatId).push({uid:currentUser.uid, nick:nickInput.value||"Anon", text, timestamp:Date.now()});
     inputP.value = "";
   });
 
   privateChats[chatId] = {tab, box, ref};
 }
 
-// Función para agregar mensaje al chat privado
-function appendPrivateMessage(m, msgBox, isNew){
-  const d = document.createElement("div");
-  const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
-  msgBox.appendChild(d);
-  msgBox.scrollTop = msgBox.scrollHeight;
 
-  // Si el chat no está activo y es mensaje nuevo, poner notificación
-  if(isNew){
-    const chatId = Object.keys(privateChats).find(id => privateChats[id].box === msgBox.parentNode);
-    const tab = privateChats[chatId].tab;
-    if(!privateChats[chatId].box.classList.contains("active")){
-      tab.classList.add("has-new");
-    }
-  }
-}
-
-// Función para abrir chat privado
 function openPrivateChat(otherUid, otherNick){
   const chatId = [currentUser.uid, otherUid].sort().join("_");
   if(privateChats[chatId]) { showChat(chatId); return; }
@@ -327,7 +306,6 @@ function openPrivateChat(otherUid, otherNick){
   showChat(chatId);
 }
 
-// Función para mostrar chat privado
 function showChat(chatId){
   Object.values(privateChats).forEach(c=>c.box.classList.remove("active"));
   privateChats[chatId].box.classList.add("active");
@@ -335,7 +313,6 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.add("active");
   privateChats[chatId].tab.classList.remove("has-new"); // quitar indicador al abrir
 }
-
 </script>
 <script>
   if('serviceWorker' in navigator){
