@@ -90,7 +90,7 @@
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
 
-  <input type="text" id="message" placeholder="Escribe un mensaje...">
+  <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
   <button id="send">Enviar</button>
 </div>
 
@@ -159,10 +159,11 @@ function initLocation(){
   });
 }
 
-// Enviar mensaje con botón o Enter
+// ====== Enviar mensaje público con límite ======
 function sendPublicMessage(){
   const text=input.value.trim();
   if(!text)return;
+  if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
   const nick=nickInput.value.trim()||"Anon";
   db.ref("mensajes").push({text,timestamp:Date.now(),uid:currentUser.uid,nick,lat:userLat,lon:userLon,gender:genderSelect.value});
   input.value="";
@@ -226,7 +227,6 @@ function createPrivateChat(chatId,otherUid,otherNick){
   closeBtn.textContent="×";
   closeBtn.addEventListener("click", e=>{
     e.stopPropagation();
-    // 🔥 Eliminar chat también de Firebase
     db.ref("chatsPrivados/"+chatId).remove();
     if(privateChats[chatId].ref) privateChats[chatId].ref.off();
     privateBoxes.removeChild(privateChats[chatId].box);
@@ -251,6 +251,7 @@ function createPrivateChat(chatId,otherUid,otherNick){
   inputContainer.style.gap="5px";
   const inputP=document.createElement("input");
   inputP.placeholder="Mensaje...";
+  inputP.maxLength=50; // 🔹 límite directo
   const btnP=document.createElement("button");
   btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
@@ -271,10 +272,10 @@ function createPrivateChat(chatId,otherUid,otherNick){
     });
   });
 
-  // Enviar con botón o Enter
   function sendPrivate(){
     const text=inputP.value.trim();
     if(!text)return;
+    if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
     chatRef.ref.push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
     inputP.value="";
   }
