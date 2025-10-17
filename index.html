@@ -226,6 +226,8 @@ function createPrivateChat(chatId,otherUid,otherNick){
   closeBtn.textContent="×";
   closeBtn.addEventListener("click", e=>{
     e.stopPropagation();
+    // 🔥 Eliminar chat también de Firebase
+    db.ref("chatsPrivados/"+chatId).remove();
     if(privateChats[chatId].ref) privateChats[chatId].ref.off();
     privateBoxes.removeChild(privateChats[chatId].box);
     privateTabs.removeChild(tab);
