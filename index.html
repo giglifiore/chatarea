@@ -339,35 +339,61 @@ function showChat(chatId){
 
 // ======== EMOJIS ========
 const emojiPicker = document.getElementById("emojiPicker");
-emojiPicker.addEventListener("click", (e) => {
-  e.stopPropagation(); // evitar cierre inmediato
+emojiPicker.addEventListener("click", () => {
+  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
+
+  // Eliminar cualquier menú existente
   document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
 
-  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
   const menu = document.createElement("div");
-  menu.className="emoji-menu";
+  menu.className = "emoji-menu";
+  menu.style.position = "absolute";
+  menu.style.background = "#fff";
+  menu.style.border = "1px solid #ccc";
+  menu.style.borderRadius = "8px";
+  menu.style.padding = "5px";
+  menu.style.display = "grid";
+  menu.style.gridTemplateColumns = "repeat(8,1fr)";
+  menu.style.gap = "4px";
+  menu.style.zIndex = 1000;
 
   Array.from(emojis).forEach(e => {
     const span = document.createElement("span");
     span.textContent = e;
+    span.style.cursor = "pointer";
+    span.style.fontSize = "20px";
     span.onclick = () => {
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        input.value = input.value.slice(0,start) + e + input.value.slice(end);
-        input.focus();
-        input.selectionStart = input.selectionEnd = start + e.length;
-        menu.remove();
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.slice(0,start) + e + input.value.slice(end);
+      input.focus();
+      input.selectionStart = input.selectionEnd = start + e.length;
+      menu.remove();
     };
     menu.appendChild(span);
-});
+  });
 
   document.body.appendChild(menu);
-  const rect=emojiPicker.getBoundingClientRect();
-  menu.style.top=rect.bottom+window.scrollY+"px";
-  menu.style.left=rect.left+window.scrollX+"px";
 
-  document.addEventListener("click", function handler(event){
-    if(!menu.contains(event.target) && event.target!==emojiPicker){
+  const rect = emojiPicker.getBoundingClientRect();
+  let top = rect.bottom + window.scrollY;
+  let left = rect.left + window.scrollX;
+
+  // Ajustar si se desborda por la derecha
+  if (left + menu.offsetWidth > window.innerWidth) {
+    left = window.innerWidth - menu.offsetWidth - 10; // 10px de margen
+  }
+
+  // Ajustar si se desborda por abajo
+  if (top + menu.offsetHeight > window.innerHeight + window.scrollY) {
+    top = rect.top + window.scrollY - menu.offsetHeight;
+  }
+
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+
+  document.addEventListener("click", function handler(event) {
+    if (!menu.contains(event.target) && event.target !== emojiPicker) {
       menu.remove();
       document.removeEventListener("click", handler);
     }
