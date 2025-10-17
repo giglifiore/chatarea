@@ -28,7 +28,7 @@
 
   #private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
-  .private-tab.active { background: #1a73e8; color: white; font-weight: normal; }
+  .private-tab.active { background: #1a73e8; color: white; }
   .private-tab:hover { background: #d2e3fc; }
 
   .close-btn {
@@ -202,28 +202,29 @@ function listenPrivateChats(){
     const chatId = snap.key;
     if(chatId.includes(currentUser.uid) && !privateChats[chatId]){
       const otherUid = chatId.replace(currentUser.uid,'').replace('_','');
-      createPrivateChat(chatId, otherUid);
+      db.ref("usuarios/"+otherUid).once("value").then(snapNick=>{
+        const otherNick = snapNick.val()?.nick || otherUid;
+        createPrivateChat(chatId, otherUid, otherNick);
+      });
     }
   });
 
   ref.on("child_changed", snap=>{
     const chatId = snap.key;
-    if(chatId.includes(currentUser.uid)){
-      if(privateChats[chatId]){
-        const tab = privateChats[chatId].tab;
-        const box = privateChats[chatId].box;
-        if(!box.classList.contains("active")){
-          tab.style.fontWeight = "bold"; // Notificación de mensaje nuevo
-        }
+    if(chatId.includes(currentUser.uid) && privateChats[chatId]){
+      const tab = privateChats[chatId].tab;
+      const box = privateChats[chatId].box;
+      if(!box.classList.contains("active")){
+        tab.style.fontWeight = "bold"; // Notificación mensaje nuevo
       }
     }
   });
 }
 
-function createPrivateChat(chatId, otherUid){
+function createPrivateChat(chatId, otherUid, otherNick){
   const tab = document.createElement("div");
   tab.className = "private-tab";
-  tab.textContent = otherUid;
+  tab.textContent = otherNick;
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "close-btn"; closeBtn.textContent = "×";
@@ -266,7 +267,7 @@ function createPrivateChat(chatId, otherUid){
     msgBox.appendChild(d);
     msgBox.scrollTop = msgBox.scrollHeight;
     if(!box.classList.contains("active")){
-      tab.style.fontWeight = "bold";
+      tab.style.fontWeight = "bold"; // notificación
     }
   });
 
@@ -283,7 +284,7 @@ function createPrivateChat(chatId, otherUid){
 function openPrivateChat(otherUid, otherNick){
   const chatId = [currentUser.uid, otherUid].sort().join("_");
   if(privateChats[chatId]) { showChat(chatId); return; }
-  createPrivateChat(chatId, otherNick||otherUid);
+  createPrivateChat(chatId, otherUid, otherNick);
   showChat(chatId);
 }
 
@@ -292,7 +293,7 @@ function showChat(chatId){
   privateChats[chatId].box.classList.add("active");
   Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
   privateChats[chatId].tab.classList.add("active");
-  privateChats[chatId].tab.style.fontWeight = "normal"; // quitar notificación al abrir
+  privateChats[chatId].tab.style.fontWeight = "normal"; // quitar notificación
 }
 </script>
 </body>
