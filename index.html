@@ -67,7 +67,6 @@
 </style>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a73e8">
-
 </head>
 <body>
 
@@ -210,6 +209,8 @@ function getDistance(lat1, lon1, lat2, lon2){
 // ==================== Chats privados con notificación ====================
 function listenPrivateChats(){
   const ref = db.ref("chatsPrivados");
+
+  // Detectar nuevos chats que involucren al usuario
   ref.on("child_added", snap=>{
     const chatId = snap.key;
     if(chatId.includes(currentUser.uid) && !privateChats[chatId]){
@@ -218,16 +219,6 @@ function listenPrivateChats(){
         const otherNick = snapNick.val()?.nick || otherUid;
         createPrivateChat(chatId, otherUid, otherNick);
       });
-    }
-  });
-
-  ref.on("child_changed", snap=>{
-    const chatId = snap.key;
-    if(chatId.includes(currentUser.uid) && privateChats[chatId]){
-      const box = privateChats[chatId].box;
-      if(!box.classList.contains("active")){
-        privateChats[chatId].tab.classList.add("has-new"); // notificación visual
-      }
     }
   });
 }
@@ -269,35 +260,48 @@ function createPrivateChat(chatId, otherUid, otherNick){
   inputContainer.appendChild(btnP);
   box.appendChild(inputContainer);
 
-  const ref = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-  
-  let initialLoad = true; // <-- flag para ignorar mensajes existentes
-  ref.on("child_added", snap=>{
-    const m = snap.val();
-    const d = document.createElement("div");
-    const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
-    msgBox.appendChild(d);
-    msgBox.scrollTop = msgBox.scrollHeight;
+  const chatRef = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
 
-    if(!box.classList.contains("active") && !initialLoad){
-      tab.classList.add("has-new"); // solo para mensajes nuevos
-    }
+  // 1️⃣ Cargar mensajes existentes sin marcar como nuevo
+  chatRef.once("value", snap=>{
+    snap.forEach(child=>{
+      const m = child.val();
+      appendPrivateMessage(m, msgBox, false);
+    });
+
+    // 2️⃣ Escuchar mensajes nuevos
+    chatRef.on("child_added", snap=>{
+      const m = snap.val();
+      appendPrivateMessage(m, msgBox, true);
+    });
   });
-
-  // Después de un pequeño delay, se considera que el initial load terminó
-  setTimeout(()=>{ initialLoad = false; }, 500);
 
   btnP.addEventListener("click", ()=>{
     const text = inputP.value.trim();
     if(!text) return;
-    db.ref("chatsPrivados/"+chatId).push({uid:currentUser.uid, nick:nickInput.value||"Anon", text, timestamp:Date.now()});
+    chatRef.push({uid:currentUser.uid, nick:nickInput.value||"Anon", text, timestamp:Date.now()});
     inputP.value = "";
   });
 
-  privateChats[chatId] = {tab, box, ref};
+  privateChats[chatId] = {tab, box, ref: chatRef};
 }
 
+// Función para agregar mensaje al chat privado
+function appendPrivateMessage(m, msgBox, isNew){
+  const d = document.createElement("div");
+  const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
+  msgBox.appendChild(d);
+  msgBox.scrollTop = msgBox.scrollHeight;
+
+  if(isNew){
+    const chatId = Object.keys(privateChats).find(id => privateChats[id].box === msgBox.parentNode);
+    const tab = privateChats[chatId].tab;
+    if(!privateChats[chatId].box.classList.contains("active")){
+      tab.classList.add("has-new");
+    }
+  }
+}
 
 function openPrivateChat(otherUid, otherNick){
   const chatId = [currentUser.uid, otherUid].sort().join("_");
@@ -311,9 +315,10 @@ function showChat(chatId){
   privateChats[chatId].box.classList.add("active");
   Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
   privateChats[chatId].tab.classList.add("active");
-  privateChats[chatId].tab.classList.remove("has-new"); // quitar indicador al abrir
+  privateChats[chatId].tab.classList.remove("has-new");
 }
 </script>
+
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
