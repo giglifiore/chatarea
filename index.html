@@ -52,7 +52,7 @@
   .private-chat button:hover { background: #155ab6; }
 
   /* Mensajes */
-  #chat-box div, .private-chat div.message { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
+  #chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; display: flex; align-items: baseline; }
   #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
   #chat-box div button:hover { background: #155ab6; }
 
@@ -201,8 +201,21 @@ function listenMessages(){
     if(dist<=chatRadius){
       const dateStr=new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
       const icon=msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
+
       const div=document.createElement("div");
-      div.textContent=`[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
+
+      // Hora discreta
+      const timeSpan=document.createElement("span");
+      timeSpan.textContent=`[${dateStr}] `;
+      timeSpan.style.fontSize="10px";
+      timeSpan.style.color="#999";
+      timeSpan.style.marginRight="4px";
+
+      const msgText=document.createTextNode(`${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`);
+
+      div.appendChild(timeSpan);
+      div.appendChild(msgText);
+
       if(msg.uid!==currentUser.uid){
         const btn=document.createElement("button");
         btn.textContent="Privado";
@@ -263,7 +276,6 @@ function createPrivateChat(chatId,otherUid,otherNick){
   privateBoxes.appendChild(box);
 
   const msgBox=document.createElement("div");
-  msgBox.className="message";
   msgBox.style.flex="1";
   msgBox.style.overflowY="auto";
   box.appendChild(msgBox);
@@ -278,16 +290,6 @@ function createPrivateChat(chatId,otherUid,otherNick){
   btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
   inputContainer.appendChild(btnP);
-
-  // Botón de emoji privado
-  const emojiBtn = document.createElement("span");
-  emojiBtn.textContent = "😊";
-  emojiBtn.style.cursor="pointer";
-  emojiBtn.style.fontSize="20px";
-  emojiBtn.style.marginLeft="4px";
-  emojiBtn.addEventListener("click", ()=>openEmojiMenu(inputP, emojiBtn));
-  inputContainer.appendChild(emojiBtn);
-
   box.appendChild(inputContainer);
 
   const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
@@ -319,9 +321,21 @@ function createPrivateChat(chatId,otherUid,otherNick){
 
 function appendPrivateMessage(m,msgBox,isNew){
   const d=document.createElement("div");
-  d.className="message";
+
   const dateStr=new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  d.textContent=`[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
+  
+  // Hora discreta
+  const timeSpan=document.createElement("span");
+  timeSpan.textContent=`[${dateStr}] `;
+  timeSpan.style.fontSize="10px";
+  timeSpan.style.color="#999";
+  timeSpan.style.marginRight="4px";
+
+  const msgText=document.createTextNode(`${m.nick||"Anon"}: ${m.text}`);
+
+  d.appendChild(timeSpan);
+  d.appendChild(msgText);
+
   msgBox.appendChild(d);
   msgBox.scrollTop=msgBox.scrollHeight;
 
@@ -349,51 +363,27 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.remove("has-new");
 }
 
-// ======== EMOJIS PÚBLICOS ========
+// ======== EMOJIS ========
 const emojiPicker = document.getElementById("emojiPicker");
-emojiPicker.addEventListener("click", () => openEmojiMenu(input, emojiPicker));
-
-function openEmojiMenu(targetInput, triggerElement) {
-  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
-
-  document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
-
-  const menu = document.createElement("div");
-  menu.className = "emoji-menu";
-
-  Array.from(emojis).forEach(e => {
-    const span = document.createElement("span");
-    span.textContent = e;
-    span.onclick = () => {
-      const start = targetInput.selectionStart;
-      const end = targetInput.selectionEnd;
-      targetInput.value = targetInput.value.slice(0,start) + e + targetInput.value.slice(end);
-      targetInput.focus();
-      targetInput.selectionStart = targetInput.selectionEnd = start + e.length;
-      menu.remove();
-    };
+emojiPicker.addEventListener("click", () => {
+  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪".split("");
+  let menu = document.querySelector(".emoji-menu");
+  if(menu){ menu.remove(); return; }
+  menu = document.createElement("div");
+  menu.className="emoji-menu";
+  emojis.forEach(e=>{
+    const span=document.createElement("span");
+    span.textContent=e;
+    span.onclick=()=>{ input.value+=e; menu.remove(); input.focus(); };
     menu.appendChild(span);
   });
-
   document.body.appendChild(menu);
+  const rect=emojiPicker.getBoundingClientRect();
+  menu.style.left=rect.left+"px";
+  menu.style.top=(rect.bottom+5)+"px";
+});
 
-  const rect = triggerElement.getBoundingClientRect();
-  let top = rect.bottom + window.scrollY;
-  let left = rect.left + window.scrollX;
-
-  if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
-  if (top + menu.offsetHeight > window.innerHeight + window.scrollY) top = rect.top + window.scrollY - menu.offsetHeight;
-
-  menu.style.left = left + "px";
-  menu.style.top = top + "px";
-
-  document.addEventListener("click", function handler(event) {
-    if (!menu.contains(event.target) && event.target !== triggerElement) {
-      menu.remove();
-      document.removeEventListener("click", handler);
-    }
-  });
-}
+document.addEventListener("click", e=>{ if(!e.target.closest(".emoji-menu") && !e.target.closest("#emojiPicker")){ const m=document.querySelector(".emoji-menu"); if(m)m.remove(); } });
 </script>
 </body>
 </html>
