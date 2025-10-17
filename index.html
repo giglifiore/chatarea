@@ -55,6 +55,15 @@
   #chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
   #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
   #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
+
+  /* Notificación de nuevo mensaje en pestaña privada */
+  .private-tab.has-new {
+    background: #ff4d4f;
+    color: white;
+  }
+  .private-tab.has-new:hover {
+    background: #e64545;
+  }
 </style>
 </head>
 <body>
@@ -212,10 +221,9 @@ function listenPrivateChats(){
   ref.on("child_changed", snap=>{
     const chatId = snap.key;
     if(chatId.includes(currentUser.uid) && privateChats[chatId]){
-      const tab = privateChats[chatId].tab;
       const box = privateChats[chatId].box;
       if(!box.classList.contains("active")){
-        tab.style.fontWeight = "bold"; // Notificación mensaje nuevo
+        privateChats[chatId].tab.classList.add("has-new"); // notificación visual
       }
     }
   });
@@ -267,7 +275,7 @@ function createPrivateChat(chatId, otherUid, otherNick){
     msgBox.appendChild(d);
     msgBox.scrollTop = msgBox.scrollHeight;
     if(!box.classList.contains("active")){
-      tab.style.fontWeight = "bold"; // notificación
+      tab.classList.add("has-new"); // notificación mensaje nuevo
     }
   });
 
@@ -293,7 +301,7 @@ function showChat(chatId){
   privateChats[chatId].box.classList.add("active");
   Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
   privateChats[chatId].tab.classList.add("active");
-  privateChats[chatId].tab.style.fontWeight = "normal"; // quitar notificación
+  privateChats[chatId].tab.classList.remove("has-new"); // quitar indicador al abrir
 }
 </script>
 </body>
