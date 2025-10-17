@@ -18,8 +18,10 @@
   #controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
   #controls label { font-weight: 500; margin-right: 5px; }
 
-  #message { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 8px; font-size: 14px; }
-  #send { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
+  #message-container { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+  #message { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+  #emojiPicker { cursor:pointer; font-size:20px; }
+  #send { padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
   #send:hover { background: #155ab6; }
 
   /* ===== Chats privados ===== */
@@ -90,8 +92,11 @@
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
 
-  <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
-  <button id="send">Enviar</button>
+  <div id="message-container">
+    <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
+    <span id="emojiPicker">😊</span>
+    <button id="send">Enviar</button>
+  </div>
 </div>
 
 <div id="private-chats">
@@ -251,7 +256,7 @@ function createPrivateChat(chatId,otherUid,otherNick){
   inputContainer.style.gap="5px";
   const inputP=document.createElement("input");
   inputP.placeholder="Mensaje...";
-  inputP.maxLength=50; // 🔹 límite directo
+  inputP.maxLength=50;
   const btnP=document.createElement("button");
   btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
@@ -315,13 +320,50 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.add("active");
   privateChats[chatId].tab.classList.remove("has-new");
 }
-</script>
 
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
-}
-</script>
+// ======== EMOJIS ========
+const emojiPicker = document.getElementById("emojiPicker");
+emojiPicker.addEventListener("click", () => {
+  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
+  
+  const menu = document.createElement("div");
+  menu.style.position = "absolute";
+  menu.style.background = "#fff";
+  menu.style.border = "1px solid #ccc";
+  menu.style.borderRadius = "8px";
+  menu.style.padding = "5px";
+  menu.style.display = "grid";
+  menu.style.gridTemplateColumns = "repeat(8,1fr)";
+  menu.style.gap = "4px";
+  menu.style.zIndex = 1000;
 
+  emojis.split("").forEach(e => {
+    const span = document.createElement("span");
+    span.textContent = e;
+    span.style.cursor = "pointer";
+    span.onclick = () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.slice(0,start)+e+input.value.slice(end);
+      input.focus();
+      input.selectionStart = input.selectionEnd = start+1;
+      menu.remove();
+    };
+    menu.appendChild(span);
+  });
+
+  const rect = emojiPicker.getBoundingClientRect();
+  menu.style.left = rect.left + "px";
+  menu.style.top = (rect.bottom + window.scrollY) + "px";
+  document.body.appendChild(menu);
+
+  document.addEventListener("click", function handler(event) {
+    if (!menu.contains(event.target) && event.target !== emojiPicker) {
+      menu.remove();
+      document.removeEventListener("click", handler);
+    }
+  });
+});
+</script>
 </body>
 </html>
