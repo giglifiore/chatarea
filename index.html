@@ -28,7 +28,7 @@
 
   #private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
-  .private-tab.active { background: #1a73e8; color: white; }
+  .private-tab.active { background: #1a73e8; color: white; font-weight: normal; }
   .private-tab:hover { background: #d2e3fc; }
 
   .close-btn {
@@ -65,7 +65,7 @@
   <div id="controls">
     <label for="radius">Radio:</label>
     <select id="radius">
-	  <option value="0.5">0.5 km</option>
+      <option value="0.5">0.5 km</option>
       <option value="1">1 km</option>
       <option value="5">5 km</option>
       <option value="10">10 km</option>
@@ -132,10 +132,7 @@ auth.signInAnonymously().then(()=>{
   userRef = db.ref("usuarios/"+currentUser.uid);
   document.getElementById("status").innerText = "Autenticado ✅";
 
-  nickInput.addEventListener("change", ()=>{
-    const nick = nickInput.value.trim();
-    if(nick) userRef.update({nick});
-  });
+  nickInput.addEventListener("change", ()=>{ const nick = nickInput.value.trim(); if(nick) userRef.update({nick}); });
   radiusSelect.addEventListener("change", ()=>userRef.update({radio: radiusSelect.value}));
   genderSelect.addEventListener("change", ()=>userRef.update({genero: genderSelect.value}));
 
@@ -198,24 +195,35 @@ function getDistance(lat1, lon1, lat2, lon2){
   return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// ==================== Chats privados con notificación ====================
 function listenPrivateChats(){
   const ref = db.ref("chatsPrivados");
   ref.on("child_added", snap=>{
     const chatId = snap.key;
-    if(chatId.includes(currentUser.uid)){
+    if(chatId.includes(currentUser.uid) && !privateChats[chatId]){
       const otherUid = chatId.replace(currentUser.uid,'').replace('_','');
-      // No abrir automáticamente, solo si el usuario lo selecciona
+      createPrivateChat(chatId, otherUid);
+    }
+  });
+
+  ref.on("child_changed", snap=>{
+    const chatId = snap.key;
+    if(chatId.includes(currentUser.uid)){
+      if(privateChats[chatId]){
+        const tab = privateChats[chatId].tab;
+        const box = privateChats[chatId].box;
+        if(!box.classList.contains("active")){
+          tab.style.fontWeight = "bold"; // Notificación de mensaje nuevo
+        }
+      }
     }
   });
 }
 
-function openPrivateChat(otherUid, otherNick){
-  const chatId = [currentUser.uid, otherUid].sort().join("_");
-  if(privateChats[chatId]) { showChat(chatId); return; }
-
+function createPrivateChat(chatId, otherUid){
   const tab = document.createElement("div");
   tab.className = "private-tab";
-  tab.textContent = otherNick || otherUid;
+  tab.textContent = otherUid;
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "close-btn"; closeBtn.textContent = "×";
@@ -231,7 +239,7 @@ function openPrivateChat(otherUid, otherNick){
   privateTabs.appendChild(tab);
 
   const box = document.createElement("div");
-  box.className = "private-chat active";
+  box.className = "private-chat";
   privateBoxes.appendChild(box);
 
   const msgBox = document.createElement("div");
@@ -257,6 +265,9 @@ function openPrivateChat(otherUid, otherNick){
     d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
     msgBox.appendChild(d);
     msgBox.scrollTop = msgBox.scrollHeight;
+    if(!box.classList.contains("active")){
+      tab.style.fontWeight = "bold";
+    }
   });
 
   btnP.addEventListener("click", ()=>{
@@ -267,6 +278,12 @@ function openPrivateChat(otherUid, otherNick){
   });
 
   privateChats[chatId] = {tab, box, ref};
+}
+
+function openPrivateChat(otherUid, otherNick){
+  const chatId = [currentUser.uid, otherUid].sort().join("_");
+  if(privateChats[chatId]) { showChat(chatId); return; }
+  createPrivateChat(chatId, otherNick||otherUid);
   showChat(chatId);
 }
 
@@ -274,7 +291,8 @@ function showChat(chatId){
   Object.values(privateChats).forEach(c=>c.box.classList.remove("active"));
   privateChats[chatId].box.classList.add("active");
   Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
-  privateChats[chatId].tab?.classList.add("active");
+  privateChats[chatId].tab.classList.add("active");
+  privateChats[chatId].tab.style.fontWeight = "normal"; // quitar notificación al abrir
 }
 </script>
 </body>
