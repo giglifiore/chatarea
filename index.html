@@ -7,6 +7,7 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 10px; color: #333; }
+
   h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
 
   #chat-box-container { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -17,15 +18,7 @@
   #controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
   #controls label { font-weight: 500; margin-right: 5px; }
 
-  /* ===== Editor ===== */
-  .chat-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-  .chat-controls button { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; background: #f1f3f5; }
-  .chat-controls button:hover { background: #e0e0e0; }
-  #colorPicker, #fontSize { padding: 4px; border-radius: 6px; border: 1px solid #ccc; }
-  #emojiPicker { font-size: 20px; cursor: pointer; }
-
-  #editableInput { flex: 1; min-height: 40px; border: 1px solid #ccc; border-radius: 10px; padding: 8px; overflow-y: auto; margin-bottom: 8px; background: #fff; }
-
+  #message { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 8px; font-size: 14px; }
   #send { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
   #send:hover { background: #155ab6; }
 
@@ -53,14 +46,17 @@
   .private-chat button { padding: 6px 12px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
   .private-chat button:hover { background: #155ab6; }
 
+  /* Mensajes */
   #chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
   #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
   #chat-box div button:hover { background: #155ab6; }
 
+  /* Scroll moderno */
   #chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
   #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
   #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
 
+  /* Notificación de nuevo mensaje */
   .private-tab.has-new { background: #ff4d4f; color: white; }
   .private-tab.has-new:hover { background: #e64545; }
 </style>
@@ -94,23 +90,7 @@
   <div id="status">Conectando...</div>
   <div id="chat-box"></div>
 
-  <!-- Barra de formato -->
-  <div class="chat-controls">
-    <button onclick="formatText('bold')"><b>B</b></button>
-    <button onclick="formatText('italic')"><i>I</i></button>
-    <button onclick="formatText('underline')"><u>U</u></button>
-    <input type="color" id="colorPicker" title="Color de texto" />
-    <select id="fontSize">
-      <option value="12px">Pequeño</option>
-      <option value="16px" selected>Mediano</option>
-      <option value="20px">Grande</option>
-    </select>
-    <span id="emojiPicker">😊</span>
-  </div>
-
-  <!-- Campo de texto editable -->
-  <div id="editableInput" contenteditable="true" placeholder="Escribe tu mensaje..."></div>
-
+  <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
   <button id="send">Enviar</button>
 </div>
 
@@ -140,7 +120,7 @@ const auth = firebase.auth();
 
 let userLat=0, userLon=0, chatRadius=1.0;
 const chatBox=document.getElementById("chat-box");
-const input=document.getElementById("editableInput");
+const input=document.getElementById("message");
 const sendBtn=document.getElementById("send");
 const radiusSelect=document.getElementById("radius");
 const genderSelect=document.getElementById("gender-select");
@@ -150,7 +130,6 @@ const privateBoxes=document.getElementById("private-boxes");
 let userRef=null,currentUser=null;
 const privateChats={};
 
-// ======== LOGIN =========
 auth.signInAnonymously().then(()=>{
   currentUser=auth.currentUser;
   userRef=db.ref("usuarios/"+currentUser.uid);
@@ -170,7 +149,6 @@ auth.signInAnonymously().then(()=>{
   });
 });
 
-// ======== GEOLOCALIZACIÓN ========
 function initLocation(){
   if(!navigator.geolocation){alert("No soporta geolocalización");return;}
   navigator.geolocation.getCurrentPosition(pos=>{
@@ -181,20 +159,18 @@ function initLocation(){
   });
 }
 
-// ======== CHAT PÚBLICO ========
+// ====== Enviar mensaje público con límite ======
 function sendPublicMessage(){
-  const text=input.innerHTML.trim();
+  const text=input.value.trim();
   if(!text)return;
-  const plainText=input.innerText.trim();
-  if(plainText.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+  if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
   const nick=nickInput.value.trim()||"Anon";
   db.ref("mensajes").push({text,timestamp:Date.now(),uid:currentUser.uid,nick,lat:userLat,lon:userLon,gender:genderSelect.value});
-  input.innerHTML="";
+  input.value="";
 }
 sendBtn.addEventListener("click", sendPublicMessage);
-input.addEventListener("keydown", e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendPublicMessage(); } });
+input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPublicMessage(); } });
 
-// ======== RECIBIR MENSAJES ========
 function listenMessages(){
   const ref=db.ref("mensajes").orderByChild("timestamp");
   ref.off();
@@ -205,7 +181,7 @@ function listenMessages(){
       const dateStr=new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
       const icon=msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
       const div=document.createElement("div");
-      div.innerHTML=`[${dateStr}] ${icon} <b>${msg.nick||"Anon"}</b>: ${msg.text} <small>(${dist.toFixed(1)} km)</small>`;
+      div.textContent=`[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
       if(msg.uid!==currentUser.uid){
         const btn=document.createElement("button");
         btn.textContent="Privado";
@@ -226,7 +202,7 @@ function getDistance(lat1,lon1,lat2,lon2){
   return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-// ======== CHATS PRIVADOS ========
+// ==================== Chats privados ====================
 function listenPrivateChats(){
   const ref=db.ref("chatsPrivados");
   ref.on("child_added", snap=>{
@@ -275,7 +251,7 @@ function createPrivateChat(chatId,otherUid,otherNick){
   inputContainer.style.gap="5px";
   const inputP=document.createElement("input");
   inputP.placeholder="Mensaje...";
-  inputP.maxLength=50;
+  inputP.maxLength=50; // 🔹 límite directo
   const btnP=document.createElement("button");
   btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
@@ -283,9 +259,17 @@ function createPrivateChat(chatId,otherUid,otherNick){
   box.appendChild(inputContainer);
 
   const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-  chatRef.on("child_added", snap=>{
-    const m=snap.val();
-    appendPrivateMessage(m,msgBox,true);
+  chatRef.once("value").then(snapshot=>{
+    let lastTimestamp=0;
+    snapshot.forEach(child=>{
+      const m=child.val();
+      appendPrivateMessage(m,msgBox,false);
+      if(m.timestamp>lastTimestamp) lastTimestamp=m.timestamp;
+    });
+    chatRef.startAt(lastTimestamp+1).on("child_added", snap=>{
+      const m=snap.val();
+      appendPrivateMessage(m,msgBox,true);
+    });
   });
 
   function sendPrivate(){
@@ -331,47 +315,6 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.add("active");
   privateChats[chatId].tab.classList.remove("has-new");
 }
-
-// ======== FORMATOS ========
-function formatText(cmd){
-  document.execCommand(cmd, false, null);
-}
-document.getElementById("colorPicker").addEventListener("input", e=>{
-  document.execCommand("foreColor", false, e.target.value);
-});
-document.getElementById("fontSize").addEventListener("change", e=>{
-  document.execCommand("fontSize", false, "7");
-  const fonts=document.getElementsByTagName("font");
-  for(let i=0;i<fonts.length;i++){
-    if(fonts[i].size=="7"){
-      fonts[i].removeAttribute("size");
-      fonts[i].style.fontSize=e.target.value;
-    }
-  }
-});
-
-// ======== EMOJIS ========
-const emojiPicker=document.getElementById("emojiPicker");
-emojiPicker.addEventListener("click", ()=>{
-  const emojis="😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
-  const menu=document.createElement("div");
-  menu.style.position="absolute";
-  menu.style.background="#fff";
-  menu.style.border="1px solid #ccc";
-  menu.style.borderRadius="8px";
-  menu.style.padding="5px";
-  menu.style.display="grid";
-  menu.style.gridTemplateColumns="repeat(8,1fr)";
-  menu.style.gap="4px";
-  emojis.split("").forEach(e=>{
-    const b=document.createElement("span");
-    b.textContent=e;
-    b.style.cursor="pointer";
-    b.onclick=()=>{document.execCommand("insertText",false,e); menu.remove();};
-    menu.appendChild(b);
-  });
-  emojiPicker.appendChild(menu);
-});
 </script>
 
 <script>
