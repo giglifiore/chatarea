@@ -52,7 +52,7 @@
   .private-chat button:hover { background: #155ab6; }
 
   /* Mensajes */
-  #chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
+  #chat-box div, .private-chat div.message { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
   #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
   #chat-box div button:hover { background: #155ab6; }
 
@@ -263,6 +263,7 @@ function createPrivateChat(chatId,otherUid,otherNick){
   privateBoxes.appendChild(box);
 
   const msgBox=document.createElement("div");
+  msgBox.className="message";
   msgBox.style.flex="1";
   msgBox.style.overflowY="auto";
   box.appendChild(msgBox);
@@ -277,6 +278,16 @@ function createPrivateChat(chatId,otherUid,otherNick){
   btnP.textContent="Enviar";
   inputContainer.appendChild(inputP);
   inputContainer.appendChild(btnP);
+
+  // Botón de emoji privado
+  const emojiBtn = document.createElement("span");
+  emojiBtn.textContent = "😊";
+  emojiBtn.style.cursor="pointer";
+  emojiBtn.style.fontSize="20px";
+  emojiBtn.style.marginLeft="4px";
+  emojiBtn.addEventListener("click", ()=>openEmojiMenu(inputP, emojiBtn));
+  inputContainer.appendChild(emojiBtn);
+
   box.appendChild(inputContainer);
 
   const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
@@ -308,6 +319,7 @@ function createPrivateChat(chatId,otherUid,otherNick){
 
 function appendPrivateMessage(m,msgBox,isNew){
   const d=document.createElement("div");
+  d.className="message";
   const dateStr=new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   d.textContent=`[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
   msgBox.appendChild(d);
@@ -337,37 +349,27 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.remove("has-new");
 }
 
-// ======== EMOJIS ========
+// ======== EMOJIS PÚBLICOS ========
 const emojiPicker = document.getElementById("emojiPicker");
-emojiPicker.addEventListener("click", () => {
+emojiPicker.addEventListener("click", () => openEmojiMenu(input, emojiPicker));
+
+function openEmojiMenu(targetInput, triggerElement) {
   const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
 
-  // Eliminar cualquier menú existente
   document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
 
   const menu = document.createElement("div");
   menu.className = "emoji-menu";
-  menu.style.position = "absolute";
-  menu.style.background = "#fff";
-  menu.style.border = "1px solid #ccc";
-  menu.style.borderRadius = "8px";
-  menu.style.padding = "5px";
-  menu.style.display = "grid";
-  menu.style.gridTemplateColumns = "repeat(8,1fr)";
-  menu.style.gap = "4px";
-  menu.style.zIndex = 1000;
 
   Array.from(emojis).forEach(e => {
     const span = document.createElement("span");
     span.textContent = e;
-    span.style.cursor = "pointer";
-    span.style.fontSize = "20px";
     span.onclick = () => {
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      input.value = input.value.slice(0,start) + e + input.value.slice(end);
-      input.focus();
-      input.selectionStart = input.selectionEnd = start + e.length;
+      const start = targetInput.selectionStart;
+      const end = targetInput.selectionEnd;
+      targetInput.value = targetInput.value.slice(0,start) + e + targetInput.value.slice(end);
+      targetInput.focus();
+      targetInput.selectionStart = targetInput.selectionEnd = start + e.length;
       menu.remove();
     };
     menu.appendChild(span);
@@ -375,31 +377,23 @@ emojiPicker.addEventListener("click", () => {
 
   document.body.appendChild(menu);
 
-  const rect = emojiPicker.getBoundingClientRect();
+  const rect = triggerElement.getBoundingClientRect();
   let top = rect.bottom + window.scrollY;
   let left = rect.left + window.scrollX;
 
-  // Ajustar si se desborda por la derecha
-  if (left + menu.offsetWidth > window.innerWidth) {
-    left = window.innerWidth - menu.offsetWidth - 10; // 10px de margen
-  }
-
-  // Ajustar si se desborda por abajo
-  if (top + menu.offsetHeight > window.innerHeight + window.scrollY) {
-    top = rect.top + window.scrollY - menu.offsetHeight;
-  }
+  if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
+  if (top + menu.offsetHeight > window.innerHeight + window.scrollY) top = rect.top + window.scrollY - menu.offsetHeight;
 
   menu.style.left = left + "px";
   menu.style.top = top + "px";
 
   document.addEventListener("click", function handler(event) {
-    if (!menu.contains(event.target) && event.target !== emojiPicker) {
+    if (!menu.contains(event.target) && event.target !== triggerElement) {
       menu.remove();
       document.removeEventListener("click", handler);
     }
   });
-});
+}
 </script>
-
 </body>
 </html>
