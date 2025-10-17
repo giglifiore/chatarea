@@ -253,23 +253,24 @@ function createPrivateChat(chatId, otherUid, otherNick){
   inputContainer.appendChild(btnP);
   box.appendChild(inputContainer);
 
-  const chatRef = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+ const chatRef = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
 
-  // Cargar mensajes existentes y obtener el último timestamp
-  chatRef.once("value").then(snapshot=>{
-    let lastTimestamp = 0;
-    snapshot.forEach(child=>{
-      const m = child.val();
-      appendPrivateMessage(m, msgBox, false);
-      if(m.timestamp > lastTimestamp) lastTimestamp = m.timestamp;
-    });
-
-    // Escuchar solo mensajes nuevos
-    chatRef.startAt(lastTimestamp + 1).on("child_added", snap=>{
-      const m = snap.val();
-      appendPrivateMessage(m, msgBox, true);
-    });
+// 1️⃣ Cargar mensajes existentes
+chatRef.once("value").then(snapshot=>{
+  let lastTimestamp = 0;
+  snapshot.forEach(child=>{
+    const m = child.val();
+    appendPrivateMessage(m, msgBox, false); // no marcar como nuevo
+    if(m.timestamp > lastTimestamp) lastTimestamp = m.timestamp;
   });
+
+  // 2️⃣ Escuchar solo mensajes nuevos
+  chatRef.startAt(lastTimestamp + 1).on("child_added", snap=>{
+    const m = snap.val();
+    appendPrivateMessage(m, msgBox, true); // marcar como nuevo
+  });
+});
+
 
   btnP.addEventListener("click", ()=>{
     const text = inputP.value.trim();
