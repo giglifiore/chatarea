@@ -1,327 +1,210 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Chismosa 🌎</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 10px; color: #333; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Chismosa 💬</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f7f8fa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+    }
 
-  h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+    h2 {
+      margin-top: 15px;
+      color: #1a73e8;
+    }
 
-  #chat-box-container { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  #chat-box { height: 300px; overflow-y: auto; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; background: #fff; }
-  #status { text-align: center; font-weight: bold; color: #4caf50; margin-bottom: 10px; }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 15px;
+      width: 95%;
+      max-width: 500px;
+      height: 80vh;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
 
-  #controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-  #controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-  #controls label { font-weight: 500; margin-right: 5px; }
+    #messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      border-bottom: 1px solid #ddd;
+    }
 
-  #message { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 8px; font-size: 14px; }
-  #send { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
-  #send:hover { background: #155ab6; }
+    .message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #f1f3f4;
+      word-wrap: break-word;
+    }
 
-  /* ===== Chats privados ===== */
-  #private-chats { margin-top: 20px; }
-  #private-chats h3 { color: #1a73e8; text-align: center; margin-bottom: 10px; }
+    .message.me {
+      background: #1a73e8;
+      color: #fff;
+      align-self: flex-end;
+    }
 
-  #private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
-  .private-tab.active { background: #1a73e8; color: white; }
-  .private-tab:hover { background: #d2e3fc; }
+    .chat-controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 6px;
+      background: #eef3fb;
+      border-top: 1px solid #ddd;
+    }
 
-  .close-btn {
-    position: absolute; top: -6px; right: -6px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: red; color: white; border: none;
-    font-size: 12px; cursor: pointer; line-height: 16px;
-  }
+    .chat-controls button {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-  #private-boxes { display: flex; flex-direction: column; gap: 10px; }
-  .private-chat { display: none; flex-direction: column; background: #fff; border-radius: 10px; padding: 10px; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  .private-chat.active { display: flex; }
+    .chat-controls button:hover {
+      background: #1a73e8;
+      color: white;
+    }
 
-  .private-chat input { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-  .private-chat button { padding: 6px 12px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
-  .private-chat button:hover { background: #155ab6; }
+    #messageInput {
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 15px;
+      outline: none;
+    }
 
-  /* Mensajes */
-  #chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
-  #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
-  #chat-box div button:hover { background: #155ab6; }
+    .input-area {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #fff;
+    }
 
-  /* Scroll moderno */
-  #chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
-  #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
-  #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
+    .input-area button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-left: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
 
-  /* Notificación de nuevo mensaje */
-  .private-tab.has-new { background: #ff4d4f; color: white; }
-  .private-tab.has-new:hover { background: #e64545; }
-</style>
+    .input-area button:hover {
+      background: #0c5cd7;
+    }
+
+    /* Scroll bonito */
+    #messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    #messages::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 4px;
+    }
+
+  </style>
 </head>
 <body>
+  <h2>💬 La Chismosa</h2>
 
-<h2>La Chismosa 🌎</h2>
+  <div class="chat-container">
+    <div id="messages"></div>
 
-<div id="chat-box-container">
-  <div id="controls">
-    <label for="radius">Radio:</label>
-    <select id="radius">
-      <option value="0.5">0.5 km</option>
-      <option value="1">1 km</option>
-      <option value="5">5 km</option>
-      <option value="10">10 km</option>
-      <option value="50">50 km</option>
-    </select>
+    <div class="chat-controls">
+      <button onclick="formatText('bold')"><b>B</b></button>
+      <button onclick="formatText('italic')"><i>I</i></button>
+      <button onclick="formatText('underline')"><u>U</u></button>
+      <input type="color" id="colorPicker" title="Color de texto" />
+      <select id="fontSize">
+        <option value="12px">Pequeño</option>
+        <option value="16px" selected>Mediano</option>
+        <option value="20px">Grande</option>
+      </select>
+    </div>
 
-    <label for="gender">Género:</label>
-    <select id="gender-select">
-      <option value="M">♂️ M</option>
-      <option value="F">♀️ F</option>
-      <option value="O">⚧ Otro</option>
-    </select>
-
-    <label for="nickname">Nick:</label>
-    <input type="text" id="nickname" placeholder="Tu apodo">
+    <div class="input-area">
+      <div id="editableInput" contenteditable="true" placeholder="Escribe tu mensaje..." 
+           style="flex:1; min-height:40px; border:1px solid #ddd; border-radius:10px; padding:8px; overflow-y:auto;"></div>
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
   </div>
 
-  <div id="status">Conectando...</div>
-  <div id="chat-box"></div>
+  <script type="module">
+    // Firebase Config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
-  <button id="send">Enviar</button>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
+      authDomain: "chatarea-6170e.firebaseapp.com",
+      projectId: "chatarea-6170e",
+      storageBucket: "chatarea-6170e.firebasestorage.app",
+      messagingSenderId: "147913199399",
+      appId: "1:147913199399:web:886f09ab74017b3fc22302",
+      databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
+    };
 
-<div id="private-chats">
-  <h3>Chats Privados 💬</h3>
-  <div id="private-tabs"></div>
-  <div id="private-boxes"></div>
-</div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const messagesRef = ref(db, "messages");
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("editableInput");
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
-  authDomain: "chatarea-6170e.firebaseapp.com",
-  projectId: "chatarea-6170e",
-  storageBucket: "chatarea-6170e.firebasestorage.app",
-  messagingSenderId: "147913199399",
-  appId: "1:147913199399:web:886f09ab74017b3fc22302",
-  databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+    // Enviar mensaje
+    window.sendMessage = function () {
+      const msg = input.innerHTML.trim();
+      if (msg === "") return;
+      push(messagesRef, { text: msg, sender: "Yo" });
+      input.innerHTML = "";
+    };
 
-let userLat=0, userLon=0, chatRadius=1.0;
-const chatBox=document.getElementById("chat-box");
-const input=document.getElementById("message");
-const sendBtn=document.getElementById("send");
-const radiusSelect=document.getElementById("radius");
-const genderSelect=document.getElementById("gender-select");
-const nickInput=document.getElementById("nickname");
-const privateTabs=document.getElementById("private-tabs");
-const privateBoxes=document.getElementById("private-boxes");
-let userRef=null,currentUser=null;
-const privateChats={};
+    // Mostrar mensajes
+    onChildAdded(messagesRef, (data) => {
+      const msg = data.val();
+      const div = document.createElement("div");
+      div.classList.add("message");
+      if (msg.sender === "Yo") div.classList.add("me");
+      div.innerHTML = msg.text;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
 
-auth.signInAnonymously().then(()=>{
-  currentUser=auth.currentUser;
-  userRef=db.ref("usuarios/"+currentUser.uid);
-  document.getElementById("status").innerText="Autenticado ✅";
+    // ---- Controles de formato ----
+    window.formatText = function (cmd) {
+      document.execCommand(cmd, false, null);
+    };
 
-  nickInput.addEventListener("change", ()=>{ const nick=nickInput.value.trim(); if(nick) userRef.update({nick}); });
-  radiusSelect.addEventListener("change", ()=>userRef.update({radio:radiusSelect.value}));
-  genderSelect.addEventListener("change", ()=>userRef.update({genero:genderSelect.value}));
+    document.getElementById("colorPicker").addEventListener("input", e => {
+      document.execCommand("foreColor", false, e.target.value);
+    });
 
-  userRef.once("value").then(snapshot=>{
-    const data=snapshot.val()||{};
-    if(data.radio){chatRadius=data.radio;radiusSelect.value=chatRadius;}
-    if(data.genero)genderSelect.value=data.genero;
-    if(data.nick)nickInput.value=data.nick;
-    initLocation();
-    listenPrivateChats();
-  });
-});
-
-function initLocation(){
-  if(!navigator.geolocation){alert("No soporta geolocalización");return;}
-  navigator.geolocation.getCurrentPosition(pos=>{
-    userLat=pos.coords.latitude;
-    userLon=pos.coords.longitude;
-    document.getElementById("status").innerText+=" | Ubicación activa";
-    listenMessages();
-  });
-}
-
-// ====== Enviar mensaje público con límite ======
-function sendPublicMessage(){
-  const text=input.value.trim();
-  if(!text)return;
-  if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
-  const nick=nickInput.value.trim()||"Anon";
-  db.ref("mensajes").push({text,timestamp:Date.now(),uid:currentUser.uid,nick,lat:userLat,lon:userLon,gender:genderSelect.value});
-  input.value="";
-}
-sendBtn.addEventListener("click", sendPublicMessage);
-input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPublicMessage(); } });
-
-function listenMessages(){
-  const ref=db.ref("mensajes").orderByChild("timestamp");
-  ref.off();
-  ref.on("child_added", snap=>{
-    const msg=snap.val();
-    const dist=getDistance(userLat,userLon,msg.lat,msg.lon);
-    if(dist<=chatRadius){
-      const dateStr=new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      const icon=msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
-      const div=document.createElement("div");
-      div.textContent=`[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
-      if(msg.uid!==currentUser.uid){
-        const btn=document.createElement("button");
-        btn.textContent="Privado";
-        btn.onclick=()=>openPrivateChat(msg.uid,msg.nick);
-        div.appendChild(btn);
+    document.getElementById("fontSize").addEventListener("change", e => {
+      document.execCommand("fontSize", false, "7");
+      const fontElements = document.getElementsByTagName("font");
+      for (let i = 0; i < fontElements.length; i++) {
+        if (fontElements[i].size == "7") {
+          fontElements[i].removeAttribute("size");
+          fontElements[i].style.fontSize = e.target.value;
+        }
       }
-      chatBox.appendChild(div);
-      chatBox.scrollTop=chatBox.scrollHeight;
-    }
-  });
-}
-
-function getDistance(lat1,lon1,lat2,lon2){
-  const R=6371;
-  const dLat=(lat2-lat1)*Math.PI/180;
-  const dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-// ==================== Chats privados ====================
-function listenPrivateChats(){
-  const ref=db.ref("chatsPrivados");
-  ref.on("child_added", snap=>{
-    const chatId=snap.key;
-    if(chatId.includes(currentUser.uid)&&!privateChats[chatId]){
-      const otherUid=chatId.replace(currentUser.uid,'').replace('_','');
-      db.ref("usuarios/"+otherUid).once("value").then(snapNick=>{
-        const otherNick=snapNick.val()?.nick||otherUid;
-        createPrivateChat(chatId,otherUid,otherNick);
-      });
-    }
-  });
-}
-
-function createPrivateChat(chatId,otherUid,otherNick){
-  const tab=document.createElement("div");
-  tab.className="private-tab";
-  tab.textContent=otherNick;
-
-  const closeBtn=document.createElement("button");
-  closeBtn.className="close-btn";
-  closeBtn.textContent="×";
-  closeBtn.addEventListener("click", e=>{
-    e.stopPropagation();
-    db.ref("chatsPrivados/"+chatId).remove();
-    if(privateChats[chatId].ref) privateChats[chatId].ref.off();
-    privateBoxes.removeChild(privateChats[chatId].box);
-    privateTabs.removeChild(tab);
-    delete privateChats[chatId];
-  });
-  tab.appendChild(closeBtn);
-  tab.addEventListener("click", ()=>showChat(chatId));
-  privateTabs.appendChild(tab);
-
-  const box=document.createElement("div");
-  box.className="private-chat";
-  privateBoxes.appendChild(box);
-
-  const msgBox=document.createElement("div");
-  msgBox.style.flex="1";
-  msgBox.style.overflowY="auto";
-  box.appendChild(msgBox);
-
-  const inputContainer=document.createElement("div");
-  inputContainer.style.display="flex";
-  inputContainer.style.gap="5px";
-  const inputP=document.createElement("input");
-  inputP.placeholder="Mensaje...";
-  inputP.maxLength=50; // 🔹 límite directo
-  const btnP=document.createElement("button");
-  btnP.textContent="Enviar";
-  inputContainer.appendChild(inputP);
-  inputContainer.appendChild(btnP);
-  box.appendChild(inputContainer);
-
-  const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-  chatRef.once("value").then(snapshot=>{
-    let lastTimestamp=0;
-    snapshot.forEach(child=>{
-      const m=child.val();
-      appendPrivateMessage(m,msgBox,false);
-      if(m.timestamp>lastTimestamp) lastTimestamp=m.timestamp;
     });
-    chatRef.startAt(lastTimestamp+1).on("child_added", snap=>{
-      const m=snap.val();
-      appendPrivateMessage(m,msgBox,true);
-    });
-  });
-
-  function sendPrivate(){
-    const text=inputP.value.trim();
-    if(!text)return;
-    if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
-    chatRef.ref.push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
-    inputP.value="";
-  }
-  btnP.addEventListener("click", sendPrivate);
-  inputP.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPrivate(); } });
-
-  privateChats[chatId]={tab,box,ref:chatRef};
-}
-
-function appendPrivateMessage(m,msgBox,isNew){
-  const d=document.createElement("div");
-  const dateStr=new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  d.textContent=`[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
-  msgBox.appendChild(d);
-  msgBox.scrollTop=msgBox.scrollHeight;
-
-  if(isNew){
-    const chatId=Object.keys(privateChats).find(id=>privateChats[id].box===msgBox.parentNode);
-    const tab=privateChats[chatId].tab;
-    if(!privateChats[chatId].box.classList.contains("active")){
-      tab.classList.add("has-new");
-    }
-  }
-}
-
-function openPrivateChat(otherUid,otherNick){
-  const chatId=[currentUser.uid,otherUid].sort().join("_");
-  if(privateChats[chatId]){showChat(chatId);return;}
-  createPrivateChat(chatId,otherUid,otherNick);
-  showChat(chatId);
-}
-
-function showChat(chatId){
-  Object.values(privateChats).forEach(c=>c.box.classList.remove("active"));
-  privateChats[chatId].box.classList.add("active");
-  Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
-  privateChats[chatId].tab.classList.add("active");
-  privateChats[chatId].tab.classList.remove("has-new");
-}
-</script>
-
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(()=>console.log("SW registrado"));
-}
-</script>
-
+  </script>
 </body>
 </html>
