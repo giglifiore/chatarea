@@ -344,22 +344,21 @@ emojiPicker.addEventListener("click", (e) => {
   document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
 
   const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
-  const menu = document.createElement("div");
-  menu.className="emoji-menu";
 
-  emojis.split("").forEach(e=>{
-    const span=document.createElement("span");
-    span.textContent=e;
-    span.onclick=()=>{
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      input.value = input.value.slice(0,start)+e+input.value.slice(end);
-      input.focus();
-      input.selectionStart = input.selectionEnd = start+e.length;
-      menu.remove();
+// Reemplaza emojis.split("") por:
+Array.from(emojis).forEach(e => {
+    const span = document.createElement("span");
+    span.textContent = e;
+    span.onclick = () => {
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        input.value = input.value.slice(0,start) + e + input.value.slice(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start + e.length;
+        menu.remove();
     };
     menu.appendChild(span);
-  });
+});
 
   document.body.appendChild(menu);
   const rect=emojiPicker.getBoundingClientRect();
