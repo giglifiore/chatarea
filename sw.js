@@ -1,8 +1,12 @@
 self.addEventListener('fetch', e => {
+  if (!e.request.url.startsWith('http')) return; // ignorar requests internos
   e.respondWith(
     fetch(e.request).catch(() => {
-      // En caso de error, devolver algo por defecto
-      return new Response('Offline or blocked request', { status: 503, statusText: 'Service Worker' });
+      return new Response('Offline or blocked request', {
+        status: 503,
+        statusText: 'Service Worker'
+      });
     })
   );
 });
+
