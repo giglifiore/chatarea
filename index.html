@@ -6,9 +6,10 @@
 <title>La Chismosa 🌎</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-  font-family: 'Noto Color Emoji', 'Segoe UI Emoji', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  body, input, textarea, select, button {
+  font-family: 'Segoe UI', 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', 'Twemoji Mozilla', Tahoma, Geneva, Verdana, sans-serif;
 }
+
 
 
   h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
@@ -328,8 +329,12 @@ function showChat(chatId){
 const emojiPicker = document.getElementById("emojiPicker");
 emojiPicker.addEventListener("click", () => {
   const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
-  
+
+  // Eliminar cualquier menú existente
+  document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
+
   const menu = document.createElement("div");
+  menu.className = "emoji-menu";
   menu.style.position = "absolute";
   menu.style.background = "#fff";
   menu.style.border = "1px solid #ccc";
@@ -344,16 +349,26 @@ emojiPicker.addEventListener("click", () => {
     const span = document.createElement("span");
     span.textContent = e;
     span.style.cursor = "pointer";
+    span.style.fontSize = "20px";
     span.onclick = () => {
       const start = input.selectionStart;
       const end = input.selectionEnd;
       input.value = input.value.slice(0,start)+e+input.value.slice(end);
       input.focus();
-      input.selectionStart = input.selectionEnd = start+1;
+      input.selectionStart = input.selectionEnd = start+e.length;
       menu.remove();
     };
     menu.appendChild(span);
   });
+
+  document.body.appendChild(menu);
+  
+  // Posicionar debajo del botón
+  const rect = emojiPicker.getBoundingClientRect();
+  menu.style.top = rect.bottom + window.scrollY + "px";
+  menu.style.left = rect.left + window.scrollX + "px";
+});
+
 
   const rect = emojiPicker.getBoundingClientRect();
   menu.style.left = rect.left + "px";
