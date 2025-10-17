@@ -344,9 +344,10 @@ emojiPicker.addEventListener("click", (e) => {
   document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
 
   const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
+  const menu = document.createElement("div");
+  menu.className="emoji-menu";
 
-// Reemplaza emojis.split("") por:
-Array.from(emojis).forEach(e => {
+  Array.from(emojis).forEach(e => {
     const span = document.createElement("span");
     span.textContent = e;
     span.onclick = () => {
