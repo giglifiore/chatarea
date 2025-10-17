@@ -5,56 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chat por Zona 🌎</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 10px; color: #333; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 10px; color: #333; }
 
-  h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
 
-  #chat-box-container { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  #chat-box { height: 300px; overflow-y: auto; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; background: #fff; }
-  #status { text-align: center; font-weight: bold; color: #4caf50; margin-bottom: 10px; }
+#chat-box-container { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+#chat-box { height: 300px; overflow-y: auto; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; background: #fff; transition: 0.3s; }
+#chat-box.new-msg { animation: flash 0.5s; }
 
-  #controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-  #controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-  #controls label { font-weight: 500; margin-right: 5px; }
+@keyframes flash { 0% {background:#fff;} 50%{background:#fffae6;} 100%{background:#fff;} }
 
-  #message { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 8px; font-size: 14px; }
-  #send { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
-  #send:hover { background: #155ab6; }
+#status { text-align: center; font-weight: bold; color: #4caf50; margin-bottom: 10px; }
 
-  /* ===== Chats privados ===== */
-  #private-chats { margin-top: 20px; }
-  #private-chats h3 { color: #1a73e8; text-align: center; margin-bottom: 10px; }
+#controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+#controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+#controls label { font-weight: 500; margin-right: 5px; }
 
-  #private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
-  .private-tab.active { background: #1a73e8; color: white; }
-  .private-tab:hover { background: #d2e3fc; }
+#message { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 8px; font-size: 14px; }
+#send { width: 100%; padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
+#send:hover { background: #155ab6; }
 
-  .close-btn {
-    position: absolute; top: -6px; right: -6px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: red; color: white; border: none;
-    font-size: 12px; cursor: pointer; line-height: 16px;
-  }
+/* Chats privados */
+#private-chats { margin-top: 20px; }
+#private-chats h3 { color: #1a73e8; text-align: center; margin-bottom: 10px; }
 
-  #private-boxes { display: flex; flex-direction: column; gap: 10px; }
-  .private-chat { display: none; flex-direction: column; background: #fff; border-radius: 10px; padding: 10px; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  .private-chat.active { display: flex; }
+#private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
+.private-tab.active { background: #1a73e8; color: white; }
+.private-tab:hover { background: #d2e3fc; }
+.private-tab .badge { position: absolute; top: -6px; right: -6px; background:red; color:white; border-radius:50%; width:18px; height:18px; font-size:12px; display:flex; justify-content:center; align-items:center; }
 
-  .private-chat input { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-  .private-chat button { padding: 6px 12px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
-  .private-chat button:hover { background: #155ab6; }
+.close-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: red; color: white; border: none; font-size: 12px; cursor: pointer; line-height: 16px; }
 
-  /* Mensajes */
-  #chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
-  #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
-  #chat-box div button:hover { background: #155ab6; }
+#private-boxes { display: flex; flex-direction: column; gap: 10px; }
+.private-chat { display: none; flex-direction: column; background: #fff; border-radius: 10px; padding: 10px; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.private-chat.active { display: flex; }
 
-  /* Scroll moderno */
-  #chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
-  #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
-  #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
+.private-chat input { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+.private-chat button { padding: 6px 12px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
+.private-chat button:hover { background: #155ab6; }
+
+/* Mensajes */
+#chat-box div, .private-chat div { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
+#chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
+#chat-box div button:hover { background: #155ab6; }
+
+/* Scroll moderno */
+#chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
+#chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+#chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
 </style>
 </head>
 <body>
@@ -95,11 +95,14 @@
   <div id="private-boxes"></div>
 </div>
 
+<audio id="notif-sound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
 <script>
+// ===== Config Firebase =====
 const firebaseConfig = {
   apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
   authDomain: "chatarea-6170e.firebaseapp.com",
@@ -123,6 +126,8 @@ const nickInput = document.getElementById("nickname");
 
 const privateTabs = document.getElementById("private-tabs");
 const privateBoxes = document.getElementById("private-boxes");
+const notifSound = document.getElementById("notif-sound");
+
 let userRef = null, currentUser = null;
 const privateChats = {};
 
@@ -131,10 +136,7 @@ auth.signInAnonymously().then(()=>{
   userRef = db.ref("usuarios/"+currentUser.uid);
   document.getElementById("status").innerText = "Autenticado ✅";
 
-  nickInput.addEventListener("change", ()=>{
-    const nick = nickInput.value.trim();
-    if(nick) userRef.update({nick});
-  });
+  nickInput.addEventListener("change", ()=>{ const nick = nickInput.value.trim(); if(nick) userRef.update({nick}); });
   radiusSelect.addEventListener("change", ()=>userRef.update({radio: radiusSelect.value}));
   genderSelect.addEventListener("change", ()=>userRef.update({genero: genderSelect.value}));
 
@@ -182,12 +184,15 @@ function listenMessages(){
         btn.textContent = "Privado"; btn.style.marginLeft="10px";
         btn.onclick = ()=>openPrivateChat(msg.uid, msg.nick);
         div.appendChild(btn);
+        flashPublicChat();
       }
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
   });
 }
+
+function flashPublicChat(){ chatBox.classList.add("new-msg"); notifSound.play(); setTimeout(()=>chatBox.classList.remove("new-msg"),500); }
 
 function getDistance(lat1, lon1, lat2, lon2){
   const R = 6371;
@@ -203,53 +208,57 @@ function listenPrivateChats(){
     const chatId = snap.key;
     if(chatId.includes(currentUser.uid)){
       const otherUid = chatId.replace(currentUser.uid,'').replace('_','');
-      // No abrir automáticamente, solo si el usuario lo selecciona
+      if(privateChats[chatId]) return; // ya abierto
+      const otherNick = otherUid;
+      const tab = document.createElement("div");
+      tab.className = "private-tab"; tab.textContent = otherNick;
+      const badge = document.createElement("div"); badge.className="badge"; badge.style.display="none"; tab.appendChild(badge);
+      tab.addEventListener("click", ()=>{ openPrivateChat(otherUid, otherNick); badge.style.display="none"; });
+      privateTabs.appendChild(tab);
+      // escuchar mensajes nuevos
+      const refChat = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+      refChat.on("child_added", snap2=>{
+        if(!privateChats[chatId]) badge.style.display="flex";
+        notifSound.play();
+      });
     }
   });
 }
 
+// ===== Función para abrir chat privado =====
 function openPrivateChat(otherUid, otherNick){
   const chatId = [currentUser.uid, otherUid].sort().join("_");
   if(privateChats[chatId]) { showChat(chatId); return; }
 
-  const tab = document.createElement("div");
-  tab.className = "private-tab";
-  tab.textContent = otherNick || otherUid;
+  const tab = [...privateTabs.children].find(t=>t.textContent.includes(otherNick)) || document.createElement("div");
+  tab.className = "private-tab"; tab.textContent = otherNick;
+
+  const badge = tab.querySelector(".badge") || document.createElement("div"); badge.className="badge"; badge.style.display="none"; tab.appendChild(badge);
 
   const closeBtn = document.createElement("button");
-  closeBtn.className = "close-btn"; closeBtn.textContent = "×";
+  closeBtn.className="close-btn"; closeBtn.textContent = "×";
   closeBtn.addEventListener("click", e=>{
     e.stopPropagation();
-    if(privateChats[chatId].ref) privateChats[chatId].ref.off();
+    if(privateChats[chatId]?.ref) privateChats[chatId].ref.off();
     privateBoxes.removeChild(privateChats[chatId].box);
     privateTabs.removeChild(tab);
     delete privateChats[chatId];
   });
   tab.appendChild(closeBtn);
   tab.addEventListener("click", ()=>showChat(chatId));
-  privateTabs.appendChild(tab);
+  if(!tab.parentNode) privateTabs.appendChild(tab);
 
-  const box = document.createElement("div");
-  box.className = "private-chat active";
+  const box = document.createElement("div"); box.className="private-chat active";
+  const msgBox = document.createElement("div"); msgBox.style.flex="1"; msgBox.style.overflowY="auto"; box.appendChild(msgBox);
+  const inputContainer = document.createElement("div"); inputContainer.style.display="flex"; inputContainer.style.gap="5px";
+  const inputP = document.createElement("input"); inputP.placeholder="Mensaje...";
+  const btnP = document.createElement("button"); btnP.textContent="Enviar";
+  inputContainer.appendChild(inputP); inputContainer.appendChild(btnP);
+  box.appendChild(inputContainer);
   privateBoxes.appendChild(box);
 
-  const msgBox = document.createElement("div");
-  msgBox.style.flex = "1";
-  msgBox.style.overflowY = "auto";
-  box.appendChild(msgBox);
-
-  const inputContainer = document.createElement("div");
-  inputContainer.style.display = "flex"; inputContainer.style.gap = "5px";
-  const inputP = document.createElement("input");
-  inputP.placeholder = "Mensaje...";
-  const btnP = document.createElement("button");
-  btnP.textContent = "Enviar";
-  inputContainer.appendChild(inputP);
-  inputContainer.appendChild(btnP);
-  box.appendChild(inputContainer);
-
-  const ref = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
-  ref.on("child_added", snap=>{
+  const refChat = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+  refChat.on("child_added", snap=>{
     const m = snap.val();
     const d = document.createElement("div");
     const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -259,13 +268,12 @@ function openPrivateChat(otherUid, otherNick){
   });
 
   btnP.addEventListener("click", ()=>{
-    const text = inputP.value.trim();
-    if(!text) return;
-    db.ref("chatsPrivados/"+chatId).push({uid:currentUser.uid, nick:nickInput.value||"Anon", text, timestamp:Date.now()});
-    inputP.value = "";
+    const text = inputP.value.trim(); if(!text) return;
+    db.ref("chatsPrivados/"+chatId).push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
+    inputP.value="";
   });
 
-  privateChats[chatId] = {tab, box, ref};
+  privateChats[chatId] = {tab, box, ref: refChat};
   showChat(chatId);
 }
 
