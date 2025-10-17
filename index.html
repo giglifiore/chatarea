@@ -262,17 +262,15 @@ function createPrivateChat(chatId, otherUid, otherNick){
 
   const chatRef = db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
 
-  // 1️⃣ Cargar mensajes existentes
-  chatRef.once("value").then(snapshot => {
-    let lastTimestamp = 0;
-    snapshot.forEach(child => {
+  // 1️⃣ Cargar mensajes existentes sin marcar como nuevo
+  chatRef.once("value", snap=>{
+    snap.forEach(child=>{
       const m = child.val();
       appendPrivateMessage(m, msgBox, false);
-      if(m.timestamp > lastTimestamp) lastTimestamp = m.timestamp;
     });
 
-    // 2️⃣ Escuchar solo los mensajes posteriores
-    chatRef.startAt(lastTimestamp + 1).on("child_added", snap => {
+    // 2️⃣ Escuchar mensajes nuevos
+    chatRef.on("child_added", snap=>{
       const m = snap.val();
       appendPrivateMessage(m, msgBox, true);
     });
@@ -287,24 +285,6 @@ function createPrivateChat(chatId, otherUid, otherNick){
 
   privateChats[chatId] = {tab, box, ref: chatRef};
 }
-
-// Función para agregar mensaje al chat privado
-function appendPrivateMessage(m, msgBox, isNew){
-  const d = document.createElement("div");
-  const dateStr = new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  d.textContent = `[${dateStr}] ${m.nick||"Anon"}: ${m.text}`;
-  msgBox.appendChild(d);
-  msgBox.scrollTop = msgBox.scrollHeight;
-
-  if(isNew){
-    const chatId = Object.keys(privateChats).find(id => privateChats[id].box === msgBox.parentNode);
-    const tab = privateChats[chatId].tab;
-    if(!privateChats[chatId].box.classList.contains("active")){
-      tab.classList.add("has-new");
-    }
-  }
-}
-
 
 // Función para agregar mensaje al chat privado
 function appendPrivateMessage(m, msgBox, isNew){
