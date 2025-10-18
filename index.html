@@ -151,6 +151,22 @@ const privateBoxes=document.getElementById("private-boxes");
 let userRef=null,currentUser=null;
 const privateChats={};
 
+// === Control antispam ===
+const messageTimestamps = {};
+const MAX_MESSAGES = 5;       // Máx. mensajes permitidos
+const TIME_WINDOW = 10000;    // 10 segundos
+
+function canSendMessage(uid) {
+  const now = Date.now();
+  if (!messageTimestamps[uid]) messageTimestamps[uid] = [];
+  messageTimestamps[uid] = messageTimestamps[uid].filter(t => now - t < TIME_WINDOW);
+  if (messageTimestamps[uid].length >= MAX_MESSAGES) {
+    return false;
+  }
+  messageTimestamps[uid].push(now);
+  return true;
+}
+
 auth.signInAnonymously().then(()=>{
   currentUser=auth.currentUser;
   userRef=db.ref("usuarios/"+currentUser.uid);
@@ -185,8 +201,22 @@ function sendPublicMessage(){
   const text=input.value.trim();
   if(!text)return;
   if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+
+  if (!canSendMessage(currentUser.uid)) {
+    alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
+    return;
+  }
+
   const nick=nickInput.value.trim()||"Anon";
-  db.ref("mensajes").push({text,timestamp:Date.now(),uid:currentUser.uid,nick,lat:userLat,lon:userLon,gender:genderSelect.value});
+  db.ref("mensajes").push({
+    text,
+    timestamp:Date.now(),
+    uid:currentUser.uid,
+    nick,
+    lat:userLat,
+    lon:userLon,
+    gender:genderSelect.value
+  });
   input.value="";
 }
 sendBtn.addEventListener("click", sendPublicMessage);
@@ -209,8 +239,6 @@ function listenMessages() {
                    '⚧';
 
       const div = document.createElement("div");
-
-      // Contenedor principal del mensaje
       div.style.display = "flex";
       div.style.alignItems = "center";
       div.style.justifyContent = "space-between";
@@ -220,12 +248,10 @@ function listenMessages() {
       div.style.margin = "4px 0";
       div.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
 
-      // Texto del mensaje
       const msgText = document.createElement("span");
       msgText.textContent = `${icon} ${msg.nick || "Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
       msgText.style.flex = "1";
 
-      // Hora (siempre visible pero tenue)
       const timeSpan = document.createElement("span");
       timeSpan.textContent = dateStr;
       timeSpan.style.fontSize = "11px";
@@ -249,8 +275,6 @@ function listenMessages() {
     }
   });
 }
-
-
 
 function getDistance(lat1,lon1,lat2,lon2){
   const R=6371;
@@ -316,7 +340,6 @@ function createPrivateChat(chatId,otherUid,otherNick){
   inputContainer.appendChild(inputP);
   inputContainer.appendChild(btnP);
 
-  // Botón de emoji privado
   const emojiBtn = document.createElement("span");
   emojiBtn.textContent = "😊";
   emojiBtn.style.cursor="pointer";
@@ -345,6 +368,12 @@ function createPrivateChat(chatId,otherUid,otherNick){
     const text=inputP.value.trim();
     if(!text)return;
     if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+
+    if (!canSendMessage(currentUser.uid)) {
+      alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
+      return;
+    }
+
     chatRef.ref.push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
     inputP.value="";
   }
@@ -371,12 +400,10 @@ function appendPrivateMessage(m, msgBox, isNew) {
     minute: "2-digit"
   });
 
-  // Mensaje principal
   const text = document.createElement("span");
   text.textContent = `${m.nick || "Anon"}: ${m.text}`;
   text.style.flex = "1";
 
-  // Hora discreta
   const time = document.createElement("span");
   time.textContent = dateStr;
   time.style.fontSize = "11px";
@@ -398,7 +425,6 @@ function appendPrivateMessage(m, msgBox, isNew) {
   }
 }
 
-
 function openPrivateChat(otherUid,otherNick){
   const chatId=[currentUser.uid,otherUid].sort().join("_");
   if(privateChats[chatId]){showChat(chatId);return;}
@@ -414,13 +440,12 @@ function showChat(chatId){
   privateChats[chatId].tab.classList.remove("has-new");
 }
 
-// ======== EMOJIS PÚBLICOS ========
+// ======== EMOJIS ========
 const emojiPicker = document.getElementById("emojiPicker");
 emojiPicker.addEventListener("click", () => openEmojiMenu(input, emojiPicker));
 
 function openEmojiMenu(targetInput, triggerElement) {
   const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
-
   document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
 
   const menu = document.createElement("div");
@@ -441,7 +466,6 @@ function openEmojiMenu(targetInput, triggerElement) {
   });
 
   document.body.appendChild(menu);
-
   const rect = triggerElement.getBoundingClientRect();
   let top = rect.bottom + window.scrollY;
   let left = rect.left + window.scrollX;
@@ -460,5 +484,6 @@ function openEmojiMenu(targetInput, triggerElement) {
   });
 }
 </script>
+
 </body>
 </html>
