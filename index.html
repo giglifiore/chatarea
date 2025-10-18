@@ -192,28 +192,70 @@ function sendPublicMessage(){
 sendBtn.addEventListener("click", sendPublicMessage);
 input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPublicMessage(); } });
 
-function listenMessages(){
-  const ref=db.ref("mensajes").orderByChild("timestamp");
+function listenMessages() {
+  const ref = db.ref("mensajes").orderByChild("timestamp");
   ref.off();
-  ref.on("child_added", snap=>{
-    const msg=snap.val();
-    const dist=getDistance(userLat,userLon,msg.lat,msg.lon);
-    if(dist<=chatRadius){
-      const dateStr=new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      const icon=msg.gender==='M'?'♂️':msg.gender==='F'?'♀️':'⚧';
-      const div=document.createElement("div");
-      div.textContent=`[${dateStr}] ${icon} ${msg.nick||"Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
-      if(msg.uid!==currentUser.uid){
-        const btn=document.createElement("button");
-        btn.textContent="Privado";
-        btn.onclick=()=>openPrivateChat(msg.uid,msg.nick);
+  ref.on("child_added", snap => {
+    const msg = snap.val();
+    const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
+
+    if (dist <= chatRadius) {
+      const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const icon = msg.gender === 'M' ? '♂️' :
+                   msg.gender === 'F' ? '♀️' :
+                   '⚧';
+
+      // --- CONTENEDOR DEL MENSAJE ---
+      const div = document.createElement("div");
+      div.style.margin = "4px 0";
+      div.style.padding = "6px 8px";
+      div.style.borderRadius = "8px";
+      div.style.background = "#fff";
+      div.style.display = "inline-block";
+      div.style.position = "relative";
+      div.style.transition = "background 0.3s";
+
+      div.onmouseenter = () => { div.style.background = "#f0f0f0"; };
+      div.onmouseleave = () => { div.style.background = "#fff"; };
+
+      // --- TEXTO PRINCIPAL ---
+      const msgText = document.createElement("span");
+      msgText.textContent = `${icon} ${msg.nick || "Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
+
+      // --- HORA DISCRETA ---
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = ` ${dateStr}`;
+      timeSpan.style.fontSize = "10px";
+      timeSpan.style.color = "#999";
+      timeSpan.style.marginLeft = "6px";
+      timeSpan.style.opacity = "0";
+      timeSpan.style.transition = "opacity 0.3s";
+
+      // Mostrar hora solo al pasar el mouse
+      div.addEventListener("mouseenter", () => { timeSpan.style.opacity = "1"; });
+      div.addEventListener("mouseleave", () => { timeSpan.style.opacity = "0"; });
+
+      div.appendChild(msgText);
+      div.appendChild(timeSpan);
+
+      // --- BOTÓN PRIVADO ---
+      if (msg.uid !== currentUser.uid) {
+        const btn = document.createElement("button");
+        btn.textContent = "Privado";
+        btn.style.marginLeft = "8px";
+        btn.onclick = () => openPrivateChat(msg.uid, msg.nick);
         div.appendChild(btn);
       }
+
       chatBox.appendChild(div);
-      chatBox.scrollTop=chatBox.scrollHeight;
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
   });
 }
+
 
 function getDistance(lat1,lon1,lat2,lon2){
   const R=6371;
