@@ -153,16 +153,30 @@ const privateChats={};
 
 // === Control antispam ===
 const messageTimestamps = {};
-const MAX_MESSAGES = 5;       // Máx. mensajes permitidos
-const TIME_WINDOW = 10000;    // 10 segundos
+const MAX_MESSAGES = 5;
+const TIME_WINDOW = 10000;
+
+// 🚫 Lista de palabras prohibidas
+const badWords = [
+  "puta","puto","pendejo","cabron","coño","mierda","maldito","idiota",
+  "fuck","shit","bitch","asshole","stupid","dumbass","imbecil","perra"
+];
+
+// ✨ Limpia texto reemplazando malas palabras por ****
+function cleanBadWords(text) {
+  let result = text;
+  badWords.forEach(w => {
+    const regex = new RegExp("\\b" + w + "\\b", "gi");
+    result = result.replace(regex, "****");
+  });
+  return result;
+}
 
 function canSendMessage(uid) {
   const now = Date.now();
   if (!messageTimestamps[uid]) messageTimestamps[uid] = [];
   messageTimestamps[uid] = messageTimestamps[uid].filter(t => now - t < TIME_WINDOW);
-  if (messageTimestamps[uid].length >= MAX_MESSAGES) {
-    return false;
-  }
+  if (messageTimestamps[uid].length >= MAX_MESSAGES) return false;
   messageTimestamps[uid].push(now);
   return true;
 }
@@ -198,10 +212,14 @@ function initLocation(){
 
 // ====== Enviar mensaje público ======
 function sendPublicMessage(){
-  const text=input.value.trim();
+  let text=input.value.trim();
   if(!text)return;
   if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
 
+  // 🧠 Filtro de lenguaje
+  text = cleanBadWords(text);
+
+  // 🕒 Antispam
   if (!canSendMessage(currentUser.uid)) {
     alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
     return;
@@ -231,12 +249,10 @@ function listenMessages() {
 
     if (dist <= chatRadius) {
       const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: '2-digit', minute: '2-digit'
       });
       const icon = msg.gender === 'M' ? '♂️' :
-                   msg.gender === 'F' ? '♀️' :
-                   '⚧';
+                   msg.gender === 'F' ? '♀️' : '⚧';
 
       const div = document.createElement("div");
       div.style.display = "flex";
@@ -365,9 +381,12 @@ function createPrivateChat(chatId,otherUid,otherNick){
   });
 
   function sendPrivate(){
-    const text=inputP.value.trim();
+    let text=inputP.value.trim();
     if(!text)return;
     if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+
+    // 🧠 Filtro de lenguaje
+    text = cleanBadWords(text);
 
     if (!canSendMessage(currentUser.uid)) {
       alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
@@ -395,11 +414,7 @@ function appendPrivateMessage(m, msgBox, isNew) {
   container.style.margin = "4px 0";
   container.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
 
-  const dateStr = new Date(m.timestamp).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
+  const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const text = document.createElement("span");
   text.textContent = `${m.nick || "Anon"}: ${m.text}`;
   text.style.flex = "1";
@@ -419,9 +434,7 @@ function appendPrivateMessage(m, msgBox, isNew) {
   if (isNew) {
     const chatId = Object.keys(privateChats).find(id => privateChats[id].box === msgBox.parentNode);
     const tab = privateChats[chatId].tab;
-    if (!privateChats[chatId].box.classList.contains("active")) {
-      tab.classList.add("has-new");
-    }
+    if (!privateChats[chatId].box.classList.contains("active")) tab.classList.add("has-new");
   }
 }
 
@@ -484,6 +497,7 @@ function openEmojiMenu(targetInput, triggerElement) {
   });
 }
 </script>
+
 
 </body>
 </html>
