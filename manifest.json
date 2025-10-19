@@ -1,9 +1,10 @@
 {
   "name": "La Chismosa",
-  "short_name": "Chismosa",
+  "short_name": "La chismosa",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f7fa",
+  "dir": "ltr",
   "theme_color": "#1a73e8",
   "icons": [
   { "src": "/icon-192.png", "sizes": "192x192", "type": "/png" },
