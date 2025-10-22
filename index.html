@@ -311,8 +311,7 @@ function listenMessages() {
       const nickDisplay = `${msg.nick || "Anon"} ${statusIcon}`;
 
       const div = document.createElement("div");
-div.dataset.uid = msg.uid; // 🔹 Guardamos el UID
-div.innerHTML = `<span style="opacity:0.6;font-size:0.8em;">[${dateStr}]</span> ${icon} <strong>${msg.nick || "Anon"}</strong>: ${msg.text} <span style="opacity:0.5;">(${dist.toFixed(1)} km)</span>`;
+      div.innerHTML = `<span style="opacity:0.6;font-size:0.8em;">[${dateStr}]</span> ${icon} <strong>${nickDisplay}</strong>: ${msg.text} <span style="opacity:0.5;">(${dist.toFixed(1)} km)</span>`;
 
       if (msg.uid !== currentUser.uid) {
         const btn = document.createElement("button");
