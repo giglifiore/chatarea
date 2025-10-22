@@ -152,30 +152,41 @@ let userRef=null,currentUser=null;
 const privateChats={};
 
 
+
+
+// ====== Estado de usuarios en línea ======
 const userStatusRef = db.ref("status");
-  const currentUserId = auth.currentUser ? auth.currentUser.uid : ("anon_" + Math.floor(Math.random() * 10000));
+const onlineUsers = {};
 
-  // Actualiza el estado del usuario
-  function setUserOnlineStatus() {
-    const nick = nickInput ? nickInput.value || "Anon" : "Anon";
-    const ref = userStatusRef.child(currentUserId);
-    ref.set({ online: true, nick, timestamp: Date.now() });
-    ref.onDisconnect().set({ online: false, nick, timestamp: Date.now() });
-  }
+auth.onAuthStateChanged(user => {
+  if (user) {
+    // 🔹 Usa el UID real del usuario autenticado
+    const uid = user.uid;
+    const ref = userStatusRef.child(uid);
 
-  // Escucha cambios globales
-  const onlineUsers = {};
-  userStatusRef.on("value", snap => {
-    const data = snap.val() || {};
-    for (const [uid, info] of Object.entries(data)) {
-      onlineUsers[uid] = info;
+    // Función para establecer online
+    function setUserOnlineStatus() {
+      const nick = nickInput ? nickInput.value || "Anon" : "Anon";
+      ref.set({ online: true, nick, timestamp: Date.now() });
+      ref.onDisconnect().set({ online: false, nick, timestamp: Date.now() });
     }
-  });
 
-  // Llama cuando el usuario inicie sesión o cargue el nick
-  auth.onAuthStateChanged(user => {
-    if (user) setUserOnlineStatus();
-  });
+    setUserOnlineStatus(); // Llamar inmediatamente
+    nickInput.addEventListener("change", setUserOnlineStatus); // Si cambia el nick, actualiza
+
+    // Escuchar cambios globales de usuarios conectados
+    userStatusRef.on("value", snap => {
+      const data = snap.val() || {};
+      Object.entries(data).forEach(([uid, info]) => {
+        onlineUsers[uid] = info;
+      });
+    });
+  }
+});
+
+
+
+
 
 
 // === Control antispam ===
