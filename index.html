@@ -1,157 +1,513 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>La Chismosa 🌎</title>
-  <meta name="theme-color" content="#1a73e8">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="/icon-192.png" type="image/png">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f7fa;
-      color: #333;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background: #1a73e8;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      font-size: 1.3em;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    #status {
-      font-size: 0.8em;
-      opacity: 0.7;
-    }
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
-    }
-    .msg {
-      background: white;
-      margin: 8px 0;
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      position: relative;
-    }
-    .msg .meta {
-      font-size: 0.8em;
-      color: gray;
-      position: absolute;
-      bottom: 5px;
-      right: 10px;
-      opacity: 0.5;
-    }
-    form {
-      display: flex;
-      border-top: 1px solid #ccc;
-      padding: 10px;
-      background: white;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      outline: none;
-    }
-    button {
-      background: #1a73e8;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 50%;
-      margin-left: 10px;
-      cursor: pointer;
-    }
-    .offline {
-      background: #ff4d4d;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Chismosa 🌎</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, input, textarea, select, button {
+    font-family: 'Segoe UI', 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', 'Twemoji Mozilla', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  h2 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+
+  #chat-box-container { background: #fff; border-radius: 12px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  #chat-box { height: 300px; overflow-y: auto; border-radius: 10px; border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; background: #fff; }
+  #status { text-align: center; font-weight: bold; color: #4caf50; margin-bottom: 10px; }
+
+  #controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  #controls select, #controls input { flex: 1; min-width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+  #controls label { font-weight: 500; margin-right: 5px; }
+
+  #message-container { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+  #message { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+  #emojiPicker { cursor:pointer; font-size:20px; }
+  #send { padding: 10px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
+  #send:hover { background: #155ab6; }
+
+  /* Chats privados */
+  #private-chats { margin-top: 20px; }
+  #private-chats h3 { color: #1a73e8; text-align: center; margin-bottom: 10px; }
+
+  #private-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .private-tab { position: relative; padding: 6px 12px; border-radius: 8px; background: #e8f0ff; cursor: pointer; font-weight: 500; transition: 0.2s; }
+  .private-tab.active { background: #1a73e8; color: white; }
+  .private-tab:hover { background: #d2e3fc; }
+  .private-tab.has-new { background: #ff4d4f; color: white; }
+  .private-tab.has-new:hover { background: #e64545; }
+
+  .close-btn {
+    position: absolute; top: -6px; right: -6px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: red; color: white; border: none;
+    font-size: 12px; cursor: pointer; line-height: 16px;
+  }
+
+  #private-boxes { display: flex; flex-direction: column; gap: 10px; }
+  .private-chat { display: none; flex-direction: column; background: #fff; border-radius: 10px; padding: 10px; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  .private-chat.active { display: flex; }
+  .private-chat input { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+  .private-chat button { padding: 6px 12px; border-radius: 6px; border: none; background: #1a73e8; color: white; cursor: pointer; }
+  .private-chat button:hover { background: #155ab6; }
+
+  /* Mensajes */
+  #chat-box div, .private-chat div.message { margin-bottom: 6px; padding: 4px 6px; border-radius: 6px; background: #f1f3f5; word-wrap: break-word; }
+  #chat-box div button { padding: 2px 6px; font-size: 12px; margin-left: 6px; background: #1a73e8; border-radius: 4px; border: none; color: white; cursor: pointer; }
+  #chat-box div button:hover { background: #155ab6; }
+
+  /* Scroll moderno */
+  #chat-box::-webkit-scrollbar, .private-chat::-webkit-scrollbar { width: 6px; }
+  #chat-box::-webkit-scrollbar-thumb, .private-chat::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+  #chat-box::-webkit-scrollbar-thumb:hover, .private-chat::-webkit-scrollbar-thumb:hover { background: #999; }
+
+  /* Menú emojis */
+  .emoji-menu {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 5px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    position: absolute;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .emoji-menu span { cursor:pointer; font-size:20px; text-align:center; }
+</style>
 </head>
 <body>
-  <header>
-    💬 La Chismosa 🌎 <div id="status">Conectando...</div>
-  </header>
-  <main id="chat"></main>
 
-  <form id="form">
-    <input type="text" id="input" placeholder="Escribe un mensaje...">
-    <button type="submit">💌</button>
-  </form>
+<h2>La Chismosa 🌎</h2>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('input');
-    const form = document.getElementById('form');
-    const status = document.getElementById('status');
+<div id="chat-box-container">
+  <div id="controls">
+    <label for="radius">Radio:</label>
+    <select id="radius">
+      <option value="0.5">0.5 km</option>
+      <option value="1">1 km</option>
+      <option value="5">5 km</option>
+      <option value="10">10 km</option>
+      <option value="50">50 km</option>
+    </select>
 
-    // Palabras prohibidas
-    const bannedWords = ["puta", "mierda", "cabron", "coño"];
-    const user = "👤 Usuario" + Math.floor(Math.random() * 1000);
+    <label for="gender">Género:</label>
+    <select id="gender-select">
+      <option value="M">♂️ M</option>
+      <option value="F">♀️ F</option>
+      <option value="O">⚧ Otro</option>
+    </select>
 
-    // Control de spam (3 mensajes en 5 segundos máx)
-    let messageTimes = [];
+    <label for="nickname">Nick:</label>
+    <input type="text" id="nickname" placeholder="Tu apodo">
+  </div>
 
-    // Actualiza estado de conexión
-    function updateStatus() {
-      if (navigator.onLine) {
-        status.textContent = "🟢 En línea";
-        status.style.color = "#b2ffb2";
-      } else {
-        status.textContent = "🔴 Sin conexión";
-        status.style.color = "#ffb2b2";
+  <div id="status">Conectando...</div>
+  <div id="chat-box"></div>
+
+  <div id="message-container">
+    <input type="text" id="message" maxlength="50" placeholder="Escribe un mensaje (máx 50 caracteres)...">
+    <span id="emojiPicker">😊</span>
+    <button id="send">Enviar</button>
+  </div>
+</div>
+
+<div id="private-chats">
+  <h3>Chats Privados 💬</h3>
+  <div id="private-tabs"></div>
+  <div id="private-boxes"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAsKJn2Z5Jb5iW4H8OjUBIXmZWXekGXCyU",
+  authDomain: "chatarea-6170e.firebaseapp.com",
+  projectId: "chatarea-6170e",
+  storageBucket: "chatarea-6170e.firebasestorage.app",
+  messagingSenderId: "147913199399",
+  appId: "1:147913199399:web:886f09ab74017b3fc22302",
+  databaseURL: "https://chatarea-6170e-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+let userLat=0, userLon=0, chatRadius=1.0;
+const chatBox=document.getElementById("chat-box");
+const input=document.getElementById("message");
+const sendBtn=document.getElementById("send");
+const radiusSelect=document.getElementById("radius");
+const genderSelect=document.getElementById("gender-select");
+const nickInput=document.getElementById("nickname");
+const privateTabs=document.getElementById("private-tabs");
+const privateBoxes=document.getElementById("private-boxes");
+let userRef=null,currentUser=null;
+const privateChats={};
+
+// === Control antispam ===
+const messageTimestamps = {};
+const MAX_MESSAGES = 5;
+const TIME_WINDOW = 10000;
+
+// 🚫 Lista de palabras prohibidas
+const badWords = [
+  "puta","puto","pendejo","cabron","coño","mierda","maldito","idiota",
+  "fuck","shit","bitch","asshole","stupid","dumbass","imbecil","perra"
+];
+
+// ✨ Limpia texto reemplazando malas palabras por ****
+function cleanBadWords(text) {
+  let result = text;
+  badWords.forEach(w => {
+    const regex = new RegExp("\\b" + w + "\\b", "gi");
+    result = result.replace(regex, "****");
+  });
+  return result;
+}
+
+function canSendMessage(uid) {
+  const now = Date.now();
+  if (!messageTimestamps[uid]) messageTimestamps[uid] = [];
+  messageTimestamps[uid] = messageTimestamps[uid].filter(t => now - t < TIME_WINDOW);
+  if (messageTimestamps[uid].length >= MAX_MESSAGES) return false;
+  messageTimestamps[uid].push(now);
+  return true;
+}
+
+auth.signInAnonymously().then(()=>{
+  currentUser=auth.currentUser;
+  userRef=db.ref("usuarios/"+currentUser.uid);
+  document.getElementById("status").innerText="Autenticado ✅";
+
+  nickInput.addEventListener("change", ()=>{ const nick=nickInput.value.trim(); if(nick) userRef.update({nick}); });
+  radiusSelect.addEventListener("change", ()=>userRef.update({radio:radiusSelect.value}));
+  genderSelect.addEventListener("change", ()=>userRef.update({genero:genderSelect.value}));
+
+  userRef.once("value").then(snapshot=>{
+    const data=snapshot.val()||{};
+    if(data.radio){chatRadius=data.radio;radiusSelect.value=chatRadius;}
+    if(data.genero)genderSelect.value=data.genero;
+    if(data.nick)nickInput.value=data.nick;
+    initLocation();
+    listenPrivateChats();
+  });
+});
+
+function initLocation(){
+  if(!navigator.geolocation){alert("No soporta geolocalización");return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    userLat=pos.coords.latitude;
+    userLon=pos.coords.longitude;
+    document.getElementById("status").innerText+=" | Ubicación activa";
+    listenMessages();
+  });
+}
+
+// ====== Enviar mensaje público ======
+function sendPublicMessage(){
+  let text=input.value.trim();
+  if(!text)return;
+  if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+
+  // 🧠 Filtro de lenguaje
+  text = cleanBadWords(text);
+
+  // 🕒 Antispam
+  if (!canSendMessage(currentUser.uid)) {
+    alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
+    return;
+  }
+
+  const nick=nickInput.value.trim()||"Anon";
+  db.ref("mensajes").push({
+    text,
+    timestamp:Date.now(),
+    uid:currentUser.uid,
+    nick,
+    lat:userLat,
+    lon:userLon,
+    gender:genderSelect.value
+  });
+  input.value="";
+}
+sendBtn.addEventListener("click", sendPublicMessage);
+input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPublicMessage(); } });
+
+function listenMessages() {
+  const ref = db.ref("mensajes").orderByChild("timestamp");
+  ref.off();
+  ref.on("child_added", snap => {
+    const msg = snap.val();
+    const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
+
+    if (dist <= chatRadius) {
+      const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit'
+      });
+      const icon = msg.gender === 'M' ? '♂️' :
+                   msg.gender === 'F' ? '♀️' : '⚧';
+
+      const div = document.createElement("div");
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.justifyContent = "space-between";
+      div.style.background = "#fff";
+      div.style.borderRadius = "8px";
+      div.style.padding = "6px 10px";
+      div.style.margin = "4px 0";
+      div.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+
+      const msgText = document.createElement("span");
+      msgText.textContent = `${icon} ${msg.nick || "Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
+      msgText.style.flex = "1";
+
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = dateStr;
+      timeSpan.style.fontSize = "11px";
+      timeSpan.style.color = "#999";
+      timeSpan.style.marginLeft = "10px";
+      timeSpan.style.whiteSpace = "nowrap";
+
+      div.appendChild(msgText);
+      div.appendChild(timeSpan);
+
+      if (msg.uid !== currentUser.uid) {
+        const btn = document.createElement("button");
+        btn.textContent = "Privado";
+        btn.onclick = () => openPrivateChat(msg.uid, msg.nick);
+        btn.style.marginLeft = "8px";
+        div.appendChild(btn);
       }
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    updateStatus();
+  });
+}
 
-    // Enviar mensaje
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const text = input.value.trim();
-      if (!text) return;
+function getDistance(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 
-      // Detectar spam
-      const now = Date.now();
-      messageTimes = messageTimes.filter(t => now - t < 5000);
-      if (messageTimes.length >= 3) {
-        alert("🚫 Estás enviando mensajes muy rápido. Espera unos segundos.");
-        return;
-      }
-      messageTimes.push(now);
+// ==================== Chats privados ====================
+function listenPrivateChats(){
+  const ref=db.ref("chatsPrivados");
+  ref.on("child_added", snap=>{
+    const chatId=snap.key;
+    if(chatId.includes(currentUser.uid)&&!privateChats[chatId]){
+      const otherUid=chatId.replace(currentUser.uid,'').replace('_','');
+      db.ref("usuarios/"+otherUid).once("value").then(snapNick=>{
+        const otherNick=snapNick.val()?.nick||otherUid;
+        createPrivateChat(chatId,otherUid,otherNick);
+      });
+    }
+  });
+}
 
-      // Filtro de palabras
-      const filtered = text.split(" ").map(w => 
-        bannedWords.includes(w.toLowerCase()) ? "****" : w
-      ).join(" ");
+function createPrivateChat(chatId,otherUid,otherNick){
+  const tab=document.createElement("div");
+  tab.className="private-tab";
+  tab.textContent=otherNick;
 
-      const msg = document.createElement('div');
-      msg.classList.add('msg');
-      msg.innerHTML = `<strong>${user}:</strong> ${filtered}
-                       <div class="meta">${new Date().toLocaleTimeString()}</div>`;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-      input.value = "";
+  const closeBtn=document.createElement("button");
+  closeBtn.className="close-btn";
+  closeBtn.textContent="×";
+  closeBtn.addEventListener("click", e=>{
+    e.stopPropagation();
+    db.ref("chatsPrivados/"+chatId).remove();
+    if(privateChats[chatId].ref) privateChats[chatId].ref.off();
+    privateBoxes.removeChild(privateChats[chatId].box);
+    privateTabs.removeChild(tab);
+    delete privateChats[chatId];
+  });
+  tab.appendChild(closeBtn);
+  tab.addEventListener("click", ()=>showChat(chatId));
+  privateTabs.appendChild(tab);
+
+  const box=document.createElement("div");
+  box.className="private-chat";
+  privateBoxes.appendChild(box);
+
+  const msgBox=document.createElement("div");
+  msgBox.className="message";
+  msgBox.style.flex="1";
+  msgBox.style.overflowY="auto";
+  box.appendChild(msgBox);
+
+  const inputContainer=document.createElement("div");
+  inputContainer.style.display="flex";
+  inputContainer.style.gap="5px";
+  const inputP=document.createElement("input");
+  inputP.placeholder="Mensaje...";
+  inputP.maxLength=50;
+  const btnP=document.createElement("button");
+  btnP.textContent="Enviar";
+  inputContainer.appendChild(inputP);
+  inputContainer.appendChild(btnP);
+
+  const emojiBtn = document.createElement("span");
+  emojiBtn.textContent = "😊";
+  emojiBtn.style.cursor="pointer";
+  emojiBtn.style.fontSize="20px";
+  emojiBtn.style.marginLeft="4px";
+  emojiBtn.addEventListener("click", ()=>openEmojiMenu(inputP, emojiBtn));
+  inputContainer.appendChild(emojiBtn);
+
+  box.appendChild(inputContainer);
+
+  const chatRef=db.ref("chatsPrivados/"+chatId).orderByChild("timestamp");
+  chatRef.once("value").then(snapshot=>{
+    let lastTimestamp=0;
+    snapshot.forEach(child=>{
+      const m=child.val();
+      appendPrivateMessage(m,msgBox,false);
+      if(m.timestamp>lastTimestamp) lastTimestamp=m.timestamp;
     });
+    chatRef.startAt(lastTimestamp+1).on("child_added", snap=>{
+      const m=snap.val();
+      appendPrivateMessage(m,msgBox,true);
+    });
+  });
 
-    // PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('✅ Service Worker registrado'))
-        .catch(err => console.log('SW error:', err));
+  function sendPrivate(){
+    let text=inputP.value.trim();
+    if(!text)return;
+    if(text.length>50){ alert("El mensaje no puede superar los 50 caracteres."); return; }
+
+    // 🧠 Filtro de lenguaje
+    text = cleanBadWords(text);
+
+    if (!canSendMessage(currentUser.uid)) {
+      alert("Estás enviando mensajes demasiado rápido. Espera unos segundos ⏳");
+      return;
     }
-  </script>
+
+    chatRef.ref.push({uid:currentUser.uid,nick:nickInput.value||"Anon",text,timestamp:Date.now()});
+    inputP.value="";
+  }
+  btnP.addEventListener("click", sendPrivate);
+  inputP.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); sendPrivate(); } });
+
+  privateChats[chatId]={tab,box,ref:chatRef};
+}
+
+function appendPrivateMessage(m, msgBox, isNew) {
+  const container = document.createElement("div");
+  container.className = "message";
+  container.style.display = "flex";
+  container.style.alignItems = "center";
+  container.style.justifyContent = "space-between";
+  container.style.background = "#f9f9f9";
+  container.style.borderRadius = "8px";
+  container.style.padding = "6px 10px";
+  container.style.margin = "4px 0";
+  container.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+
+  const dateStr = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const text = document.createElement("span");
+  text.textContent = `${m.nick || "Anon"}: ${m.text}`;
+  text.style.flex = "1";
+
+  const time = document.createElement("span");
+  time.textContent = dateStr;
+  time.style.fontSize = "11px";
+  time.style.color = "#999";
+  time.style.marginLeft = "10px";
+  time.style.whiteSpace = "nowrap";
+
+  container.appendChild(text);
+  container.appendChild(time);
+  msgBox.appendChild(container);
+  msgBox.scrollTop = msgBox.scrollHeight;
+
+  if (isNew) {
+    const chatId = Object.keys(privateChats).find(id => privateChats[id].box === msgBox.parentNode);
+    const tab = privateChats[chatId].tab;
+    if (!privateChats[chatId].box.classList.contains("active")) tab.classList.add("has-new");
+  }
+}
+
+function openPrivateChat(otherUid,otherNick){
+  const chatId=[currentUser.uid,otherUid].sort().join("_");
+  if(privateChats[chatId]){showChat(chatId);return;}
+  createPrivateChat(chatId,otherUid,otherNick);
+  showChat(chatId);
+}
+
+function showChat(chatId){
+  Object.values(privateChats).forEach(c=>c.box.classList.remove("active"));
+  privateChats[chatId].box.classList.add("active");
+  Object.values(privateChats).forEach(c=>c.tab.classList.remove("active"));
+  privateChats[chatId].tab.classList.add("active");
+  privateChats[chatId].tab.classList.remove("has-new");
+}
+
+// ======== EMOJIS ========
+const emojiPicker = document.getElementById("emojiPicker");
+emojiPicker.addEventListener("click", () => openEmojiMenu(input, emojiPicker));
+
+function openEmojiMenu(targetInput, triggerElement) {
+  const emojis = "😀😁😂🤣😃😄😅😆😉😊😍😘😎🤩🤔😢😭😡😇🙈🙉🙊👍👎👏🙏💪🔥❤️💔💋🎉💯";
+  document.querySelectorAll(".emoji-menu").forEach(m => m.remove());
+
+  const menu = document.createElement("div");
+  menu.className = "emoji-menu";
+
+  Array.from(emojis).forEach(e => {
+    const span = document.createElement("span");
+    span.textContent = e;
+    span.onclick = () => {
+      const start = targetInput.selectionStart;
+      const end = targetInput.selectionEnd;
+      targetInput.value = targetInput.value.slice(0,start) + e + targetInput.value.slice(end);
+      targetInput.focus();
+      targetInput.selectionStart = targetInput.selectionEnd = start + e.length;
+      menu.remove();
+    };
+    menu.appendChild(span);
+  });
+
+  document.body.appendChild(menu);
+  const rect = triggerElement.getBoundingClientRect();
+  let top = rect.bottom + window.scrollY;
+  let left = rect.left + window.scrollX;
+
+  if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
+  if (top + menu.offsetHeight > window.innerHeight + window.scrollY) top = rect.top + window.scrollY - menu.offsetHeight;
+
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+
+  document.addEventListener("click", function handler(event) {
+    if (!menu.contains(event.target) && event.target !== triggerElement) {
+      menu.remove();
+      document.removeEventListener("click", handler);
+    }
+  });
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('✅ Service Worker registrado:', reg.scope))
+      .catch(err => console.log('❌ Error al registrar Service Worker:', err));
+  });
+}
+</script>
+
+
 </body>
 </html>
