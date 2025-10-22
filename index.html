@@ -174,13 +174,29 @@ auth.onAuthStateChanged(user => {
     setUserOnlineStatus(); // Llamar inmediatamente
     nickInput.addEventListener("change", setUserOnlineStatus); // Si cambia el nick, actualiza
 
+// Actualiza los estados de usuarios visibles en los mensajes
+function refreshUserStatuses() {
+  document.querySelectorAll("#chat-box div").forEach(div => {
+    const nickEl = div.querySelector("strong");
+    if (!nickEl) return;
+    const nickText = nickEl.textContent.split(" ")[0]; // nick antes del icono
+    const msgUid = Object.keys(onlineUsers).find(uid => onlineUsers[uid]?.nick === nickText);
+    if (msgUid) {
+      const statusIcon = onlineUsers[msgUid].online ? "🟢" : "🔴";
+      nickEl.textContent = `${nickText} ${statusIcon}`;
+    }
+  });
+}
+
+
     // Escuchar cambios globales de usuarios conectados
     userStatusRef.on("value", snap => {
-      const data = snap.val() || {};
-      Object.entries(data).forEach(([uid, info]) => {
-        onlineUsers[uid] = info;
-      });
-    });
+  const data = snap.val() || {};
+  Object.entries(data).forEach(([uid, info]) => {
+    onlineUsers[uid] = info;
+  });
+  refreshUserStatuses(); // 🔹 Aquí actualizamos todos los mensajes visibles
+});
   }
 });
 
