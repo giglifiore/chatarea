@@ -499,6 +499,56 @@ function openEmojiMenu(targetInput, triggerElement) {
 </script>
 
 <script>
+  // ====== Usuarios en línea ======
+  const userId = auth.currentUser ? auth.currentUser.uid : ("anon_" + Math.floor(Math.random() * 10000));
+  const userStatusRef = db.ref("status/" + userId);
+
+  // Crear contenedor visual
+  const onlineBox = document.createElement("div");
+  onlineBox.id = "onlineUsers";
+  onlineBox.style = `
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    font-family: sans-serif;
+    font-size: 13px;
+    max-width: 200px;
+  `;
+  onlineBox.innerHTML = "Conectando usuarios...";
+  document.body.appendChild(onlineBox);
+
+  // Detectar conexión/desconexión
+  function updateOnlineStatus() {
+    userStatusRef.set({ online: true, nick: nickInput.value || "Anon", timestamp: Date.now() });
+    userStatusRef.onDisconnect().set({ online: false, timestamp: Date.now() });
+  }
+
+  // Actualizar lista visual
+  const allUsersRef = db.ref("status");
+  allUsersRef.on("value", (snapshot) => {
+    const users = snapshot.val() || {};
+    const onlineUsers = Object.values(users).filter(u => u.online);
+    if (onlineUsers.length === 0) {
+      onlineBox.innerHTML = "🟡 Nadie en línea";
+    } else {
+      onlineBox.innerHTML = `
+        <strong>🟢 En línea:</strong><br>
+        ${onlineUsers.map(u => u.nick || "Anon").join("<br>")}
+      `;
+    }
+  });
+
+  // Ejecutar cuando Firebase termine de autenticar
+  auth.onAuthStateChanged((user) => {
+    if (user) updateOnlineStatus();
+  });
+</script>
+
+<script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
