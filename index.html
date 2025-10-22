@@ -151,6 +151,33 @@ const privateBoxes=document.getElementById("private-boxes");
 let userRef=null,currentUser=null;
 const privateChats={};
 
+
+const userStatusRef = db.ref("status");
+  const currentUserId = auth.currentUser ? auth.currentUser.uid : ("anon_" + Math.floor(Math.random() * 10000));
+
+  // Actualiza el estado del usuario
+  function setUserOnlineStatus() {
+    const nick = nickInput ? nickInput.value || "Anon" : "Anon";
+    const ref = userStatusRef.child(currentUserId);
+    ref.set({ online: true, nick, timestamp: Date.now() });
+    ref.onDisconnect().set({ online: false, nick, timestamp: Date.now() });
+  }
+
+  // Escucha cambios globales
+  const onlineUsers = {};
+  userStatusRef.on("value", snap => {
+    const data = snap.val() || {};
+    for (const [uid, info] of Object.entries(data)) {
+      onlineUsers[uid] = info;
+    }
+  });
+
+  // Llama cuando el usuario inicie sesión o cargue el nick
+  auth.onAuthStateChanged(user => {
+    if (user) setUserOnlineStatus();
+  });
+
+
 // === Control antispam ===
 const messageTimestamps = {};
 const MAX_MESSAGES = 5;
@@ -246,43 +273,22 @@ function listenMessages() {
   ref.on("child_added", snap => {
     const msg = snap.val();
     const dist = getDistance(userLat, userLon, msg.lat, msg.lon);
-
     if (dist <= chatRadius) {
-      const dateStr = new Date(msg.timestamp).toLocaleTimeString([], {
-        hour: '2-digit', minute: '2-digit'
-      });
-      const icon = msg.gender === 'M' ? '♂️' :
-                   msg.gender === 'F' ? '♀️' : '⚧';
+      const dateStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const icon = msg.gender === 'M' ? '♂️' : msg.gender === 'F' ? '♀️' : '⚧';
+
+      // 💬 Mostrar estado en línea junto al nick
+      const userInfo = onlineUsers[msg.uid];
+      const statusIcon = userInfo && userInfo.online ? '🟢' : '🔴';
+      const nickDisplay = `${msg.nick || "Anon"} ${statusIcon}`;
 
       const div = document.createElement("div");
-      div.style.display = "flex";
-      div.style.alignItems = "center";
-      div.style.justifyContent = "space-between";
-      div.style.background = "#fff";
-      div.style.borderRadius = "8px";
-      div.style.padding = "6px 10px";
-      div.style.margin = "4px 0";
-      div.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
-
-      const msgText = document.createElement("span");
-      msgText.textContent = `${icon} ${msg.nick || "Anon"}: ${msg.text} (${dist.toFixed(1)} km)`;
-      msgText.style.flex = "1";
-
-      const timeSpan = document.createElement("span");
-      timeSpan.textContent = dateStr;
-      timeSpan.style.fontSize = "11px";
-      timeSpan.style.color = "#999";
-      timeSpan.style.marginLeft = "10px";
-      timeSpan.style.whiteSpace = "nowrap";
-
-      div.appendChild(msgText);
-      div.appendChild(timeSpan);
+      div.innerHTML = `<span style="opacity:0.6;font-size:0.8em;">[${dateStr}]</span> ${icon} <strong>${nickDisplay}</strong>: ${msg.text} <span style="opacity:0.5;">(${dist.toFixed(1)} km)</span>`;
 
       if (msg.uid !== currentUser.uid) {
         const btn = document.createElement("button");
         btn.textContent = "Privado";
         btn.onclick = () => openPrivateChat(msg.uid, msg.nick);
-        btn.style.marginLeft = "8px";
         div.appendChild(btn);
       }
 
@@ -291,6 +297,7 @@ function listenMessages() {
     }
   });
 }
+
 
 function getDistance(lat1,lon1,lat2,lon2){
   const R=6371;
@@ -498,55 +505,6 @@ function openEmojiMenu(targetInput, triggerElement) {
 }
 </script>
 
-<script>
-  // ====== Usuarios en línea ======
-  const userId = auth.currentUser ? auth.currentUser.uid : ("anon_" + Math.floor(Math.random() * 10000));
-  const userStatusRef = db.ref("status/" + userId);
-
-  // Crear contenedor visual
-  const onlineBox = document.createElement("div");
-  onlineBox.id = "onlineUsers";
-  onlineBox.style = `
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: #fff;
-    padding: 10px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    font-family: sans-serif;
-    font-size: 13px;
-    max-width: 200px;
-  `;
-  onlineBox.innerHTML = "Conectando usuarios...";
-  document.body.appendChild(onlineBox);
-
-  // Detectar conexión/desconexión
-  function updateOnlineStatus() {
-    userStatusRef.set({ online: true, nick: nickInput.value || "Anon", timestamp: Date.now() });
-    userStatusRef.onDisconnect().set({ online: false, timestamp: Date.now() });
-  }
-
-  // Actualizar lista visual
-  const allUsersRef = db.ref("status");
-  allUsersRef.on("value", (snapshot) => {
-    const users = snapshot.val() || {};
-    const onlineUsers = Object.values(users).filter(u => u.online);
-    if (onlineUsers.length === 0) {
-      onlineBox.innerHTML = "🟡 Nadie en línea";
-    } else {
-      onlineBox.innerHTML = `
-        <strong>🟢 En línea:</strong><br>
-        ${onlineUsers.map(u => u.nick || "Anon").join("<br>")}
-      `;
-    }
-  });
-
-  // Ejecutar cuando Firebase termine de autenticar
-  auth.onAuthStateChanged((user) => {
-    if (user) updateOnlineStatus();
-  });
-</script>
 
 <script>
 if ('serviceWorker' in navigator) {
