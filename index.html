@@ -177,16 +177,17 @@ auth.onAuthStateChanged(user => {
 // Actualiza los estados de usuarios visibles en los mensajes
 function refreshUserStatuses() {
   document.querySelectorAll("#chat-box div").forEach(div => {
+    const uid = div.dataset.uid;
+    if (!uid) return;
+    const userInfo = onlineUsers[uid];
     const nickEl = div.querySelector("strong");
-    if (!nickEl) return;
-    const nickText = nickEl.textContent.split(" ")[0]; // nick antes del icono
-    const msgUid = Object.keys(onlineUsers).find(uid => onlineUsers[uid]?.nick === nickText);
-    if (msgUid) {
-      const statusIcon = onlineUsers[msgUid].online ? "🟢" : "🔴";
-      nickEl.textContent = `${nickText} ${statusIcon}`;
+    if (nickEl && userInfo) {
+      const statusIcon = userInfo.online ? "🟢" : "🔴";
+      nickEl.textContent = `${userInfo.nick || "Anon"} ${statusIcon}`;
     }
   });
 }
+
 
 
     // Escuchar cambios globales de usuarios conectados
@@ -310,7 +311,8 @@ function listenMessages() {
       const nickDisplay = `${msg.nick || "Anon"} ${statusIcon}`;
 
       const div = document.createElement("div");
-      div.innerHTML = `<span style="opacity:0.6;font-size:0.8em;">[${dateStr}]</span> ${icon} <strong>${nickDisplay}</strong>: ${msg.text} <span style="opacity:0.5;">(${dist.toFixed(1)} km)</span>`;
+div.dataset.uid = msg.uid; // 🔹 Guardamos el UID
+div.innerHTML = `<span style="opacity:0.6;font-size:0.8em;">[${dateStr}]</span> ${icon} <strong>${msg.nick || "Anon"}</strong>: ${msg.text} <span style="opacity:0.5;">(${dist.toFixed(1)} km)</span>`;
 
       if (msg.uid !== currentUser.uid) {
         const btn = document.createElement("button");
